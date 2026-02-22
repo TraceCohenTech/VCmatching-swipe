@@ -27,71 +27,65 @@ function fundSizeInRange(fundSize: string, lpMin: string, lpMax: string): boolea
   return fund.min <= prefMax.max && fund.max >= prefMin.min;
 }
 
-// Improved scoring algorithm
+// Shuffle array using Fisher-Yates algorithm
+function shuffleArray<T>(array: T[]): T[] {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
+// Fair scoring algorithm - no bias toward large/established funds
 function calculateScore(fund: Fund, lpProfile: NonNullable<ReturnType<typeof useApp>["lpProfile"]>): number {
   let score = 0;
   let maxScore = 0;
 
-  // Stage match (25 points max)
-  maxScore += 25;
+  // Stage match (30 points max) - most important
+  maxScore += 30;
   const stageMatches = fund.stage.filter((s) => lpProfile.stages.includes(s)).length;
   if (stageMatches > 0) {
-    score += Math.min(25, stageMatches * 12);
+    score += Math.min(30, stageMatches * 15);
   }
 
-  // Sector match (25 points max) - weighted by overlap percentage
-  maxScore += 25;
+  // Sector match (30 points max) - weighted by overlap percentage
+  maxScore += 30;
   const sectorMatches = fund.sectors.filter((s) => lpProfile.sectors.includes(s)).length;
   if (lpProfile.sectors.length > 0 && fund.sectors.length > 0) {
     const sectorOverlapRatio = sectorMatches / Math.min(fund.sectors.length, lpProfile.sectors.length);
-    score += Math.round(sectorOverlapRatio * 25);
+    score += Math.round(sectorOverlapRatio * 30);
   }
 
-  // Geography match (15 points)
-  maxScore += 15;
-  if (lpProfile.geography.length === 0 || lpProfile.geography.includes("Global")) {
-    score += 15; // No geo preference means all match
-  } else if (lpProfile.geography.includes(fund.geography)) {
-    score += 15;
+  // Geography match (20 points)
+  maxScore += 20;
+  if (lpProfile.geography.length === 0) {
+    score += 20; // No preference = match all
+  } else if (lpProfile.geography.includes("Global") || lpProfile.geography.includes(fund.geography)) {
+    score += 20;
   }
 
-  // LP type fit (10 points)
-  maxScore += 10;
-  if (fund.lpFit.includes(lpProfile.type)) {
-    score += 10;
-  }
-
-  // Fund size match (15 points) - NEW
-  maxScore += 15;
+  // Fund size match (20 points) - respect LP preferences
+  maxScore += 20;
   if (fundSizeInRange(fund.fundSize, lpProfile.fundSizeMin, lpProfile.fundSizeMax)) {
-    score += 15;
+    score += 20;
   }
 
-  // Fund tier/manager preference (10 points) - IMPROVED
-  maxScore += 10;
-  const isEmerging = fund.tier === "emerging";
-  const isEstablished = fund.tier === "established" || fund.tier === "top-tier" || fund.tier === "elite";
+  // Manager preference - ONLY apply if LP has a preference
+  // This ensures no inherent bias toward established funds
+  if (lpProfile.preferEmerging || lpProfile.preferEstablished) {
+    maxScore += 20;
+    const isEmerging = fund.tier === "emerging";
+    const isEstablished = fund.tier === "established" || fund.tier === "top-tier" || fund.tier === "elite";
 
-  if (lpProfile.preferEmerging && !lpProfile.preferEstablished) {
-    // Only wants emerging - penalize established funds heavily
-    if (isEmerging) {
-      score += 10;
-    } else {
-      score += 0; // No points for established when they only want emerging
+    if (lpProfile.preferEmerging && isEmerging) {
+      score += 20;
+    } else if (lpProfile.preferEstablished && isEstablished) {
+      score += 20;
+    } else if (lpProfile.preferEmerging && lpProfile.preferEstablished) {
+      // Wants both
+      score += 20;
     }
-  } else if (lpProfile.preferEstablished && !lpProfile.preferEmerging) {
-    // Only wants established
-    if (isEstablished) {
-      score += 10;
-    } else {
-      score += 0;
-    }
-  } else if (lpProfile.preferEmerging && lpProfile.preferEstablished) {
-    // Wants both - give points to either
-    score += 10;
-  } else {
-    // No preference - slight bonus to all
-    score += 5;
   }
 
   // Normalize to percentage

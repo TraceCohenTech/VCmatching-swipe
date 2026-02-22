@@ -1,22 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Redis } from "@upstash/redis";
+import { createClient } from "@supabase/supabase-js";
 
-// Initialize Redis client (will use env vars UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN)
-const redis = process.env.UPSTASH_REDIS_REST_URL
-  ? new Redis({
-      url: process.env.UPSTASH_REDIS_REST_URL,
-      token: process.env.UPSTASH_REDIS_REST_TOKEN!,
-    })
+// Initialize Supabase client (uses env vars from Vercel)
+const supabase = process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY
+  ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY)
   : null;
 
 interface SwipeData {
-  lpId: string;
-  lpType: string;
-  fundId: string;
-  fundName: string;
+  lp_id: string;
+  lp_type: string;
+  fund_id: string;
+  fund_name: string;
   action: "like" | "pass";
   score: number;
-  timestamp: string;
   stages: string[];
   sectors: string[];
   geography: string[];
@@ -31,13 +27,21 @@ interface AggregateData {
   lpTypeStats: Record<string, number>;
   stageStats: Record<string, number>;
   sectorStats: Record<string, number>;
-  recentSwipes: SwipeData[];
+  recentSwipes: Array<{
+    lpId: string;
+    lpType: string;
+    fundId: string;
+    fundName: string;
+    action: string;
+    score: number;
+    timestamp: string;
+    stages: string[];
+    sectors: string[];
+  }>;
   lastUpdated: string;
 }
 
-const ANALYTICS_KEY = "lp_matchmaking_analytics";
-
-// Fallback in-memory storage for development
+// Fallback in-memory storage
 const globalForAnalytics = globalThis as unknown as {
   analyticsData: AggregateData;
 };
@@ -61,41 +65,17 @@ if (!globalForAnalytics.analyticsData) {
   globalForAnalytics.analyticsData = getDefaultData();
 }
 
-async function getData(): Promise<AggregateData> {
-  if (redis) {
-    try {
-      const data = await redis.get<AggregateData>(ANALYTICS_KEY);
-      return data || getDefaultData();
-    } catch (e) {
-      console.error("Redis get error:", e);
-      return globalForAnalytics.analyticsData;
-    }
-  }
-  return globalForAnalytics.analyticsData;
-}
-
-async function saveData(data: AggregateData): Promise<void> {
-  if (redis) {
-    try {
-      await redis.set(ANALYTICS_KEY, data);
-    } catch (e) {
-      console.error("Redis set error:", e);
-    }
-  }
-  globalForAnalytics.analyticsData = data;
-}
-
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { type, payload } = body;
 
-    const data = await getData();
+    // Always update in-memory for immediate response
+    const data = globalForAnalytics.analyticsData;
 
     if (type === "swipe") {
-      const swipe = payload as SwipeData;
+      const swipe = payload;
 
-      // Update totals
       data.totalSwipes++;
       if (swipe.action === "like") {
         data.totalLikes++;
@@ -103,7 +83,6 @@ export async function POST(request: NextRequest) {
         data.totalPasses++;
       }
 
-      // Update fund stats
       if (!data.fundStats[swipe.fundId]) {
         data.fundStats[swipe.fundId] = { likes: 0, passes: 0, name: swipe.fundName };
       }
@@ -113,38 +92,74 @@ export async function POST(request: NextRequest) {
         data.fundStats[swipe.fundId].passes++;
       }
 
-      // Update LP type stats
       data.lpTypeStats[swipe.lpType] = (data.lpTypeStats[swipe.lpType] || 0) + 1;
 
-      // Update stage stats
       if (swipe.stages) {
-        swipe.stages.forEach((stage) => {
+        swipe.stages.forEach((stage: string) => {
           data.stageStats[stage] = (data.stageStats[stage] || 0) + 1;
         });
       }
 
-      // Update sector stats
       if (swipe.sectors) {
-        swipe.sectors.forEach((sector) => {
+        swipe.sectors.forEach((sector: string) => {
           data.sectorStats[sector] = (data.sectorStats[sector] || 0) + 1;
         });
       }
 
-      // Keep last 100 swipes
-      data.recentSwipes.unshift(swipe);
+      data.recentSwipes.unshift({
+        lpId: swipe.lpId,
+        lpType: swipe.lpType,
+        fundId: swipe.fundId,
+        fundName: swipe.fundName,
+        action: swipe.action,
+        score: swipe.score,
+        timestamp: swipe.timestamp || new Date().toISOString(),
+        stages: swipe.stages || [],
+        sectors: swipe.sectors || [],
+      });
       if (data.recentSwipes.length > 100) {
         data.recentSwipes = data.recentSwipes.slice(0, 100);
       }
 
       data.lastUpdated = new Date().toISOString();
+
+      // Also save to Supabase if connected
+      if (supabase) {
+        try {
+          await supabase.from("swipes").insert({
+            lp_id: swipe.lpId,
+            lp_type: swipe.lpType,
+            fund_id: swipe.fundId,
+            fund_name: swipe.fundName,
+            action: swipe.action,
+            score: swipe.score,
+            stages: swipe.stages,
+            sectors: swipe.sectors,
+            geography: swipe.geography,
+            created_at: new Date().toISOString(),
+          });
+        } catch (e) {
+          console.error("Supabase insert error:", e);
+        }
+      }
     }
 
     if (type === "session") {
       data.totalSessions++;
       data.lastUpdated = new Date().toISOString();
-    }
 
-    await saveData(data);
+      if (supabase) {
+        try {
+          await supabase.from("sessions").insert({
+            lp_id: payload.lpId,
+            lp_type: payload.lpType,
+            created_at: new Date().toISOString(),
+          });
+        } catch (e) {
+          console.error("Supabase session insert error:", e);
+        }
+      }
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -157,11 +172,86 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const key = searchParams.get("key");
 
-  // Secret key check - change this to your own secret!
   if (key !== "lpmatch2024admin") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const data = await getData();
-  return NextResponse.json(data);
+  // Try to get data from Supabase first
+  if (supabase) {
+    try {
+      // Get all swipes
+      const { data: swipes, error: swipesError } = await supabase
+        .from("swipes")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(100);
+
+      // Get session count
+      const { count: sessionCount } = await supabase
+        .from("sessions")
+        .select("*", { count: "exact", head: true });
+
+      if (!swipesError && swipes) {
+        // Build aggregate data from Supabase
+        const fundStats: Record<string, { likes: number; passes: number; name: string }> = {};
+        const lpTypeStats: Record<string, number> = {};
+        const stageStats: Record<string, number> = {};
+        const sectorStats: Record<string, number> = {};
+        let totalLikes = 0;
+        let totalPasses = 0;
+
+        // Get all swipes for stats (not just last 100)
+        const { data: allSwipes } = await supabase.from("swipes").select("*");
+
+        (allSwipes || []).forEach((swipe) => {
+          if (swipe.action === "like") totalLikes++;
+          else totalPasses++;
+
+          if (!fundStats[swipe.fund_id]) {
+            fundStats[swipe.fund_id] = { likes: 0, passes: 0, name: swipe.fund_name };
+          }
+          if (swipe.action === "like") fundStats[swipe.fund_id].likes++;
+          else fundStats[swipe.fund_id].passes++;
+
+          lpTypeStats[swipe.lp_type] = (lpTypeStats[swipe.lp_type] || 0) + 1;
+
+          (swipe.stages || []).forEach((stage: string) => {
+            stageStats[stage] = (stageStats[stage] || 0) + 1;
+          });
+
+          (swipe.sectors || []).forEach((sector: string) => {
+            sectorStats[sector] = (sectorStats[sector] || 0) + 1;
+          });
+        });
+
+        return NextResponse.json({
+          totalSwipes: (allSwipes || []).length,
+          totalLikes,
+          totalPasses,
+          totalSessions: sessionCount || 0,
+          fundStats,
+          lpTypeStats,
+          stageStats,
+          sectorStats,
+          recentSwipes: swipes.map((s) => ({
+            lpId: s.lp_id,
+            lpType: s.lp_type,
+            fundId: s.fund_id,
+            fundName: s.fund_name,
+            action: s.action,
+            score: s.score,
+            timestamp: s.created_at,
+            stages: s.stages || [],
+            sectors: s.sectors || [],
+          })),
+          lastUpdated: new Date().toISOString(),
+        });
+      }
+    } catch (e) {
+      console.error("Supabase fetch error:", e);
+    }
+  }
+
+  // Fallback to in-memory
+  return NextResponse.json(globalForAnalytics.analyticsData);
 }
