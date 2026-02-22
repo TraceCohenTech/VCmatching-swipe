@@ -8,13 +8,23 @@ import FundCard from "./FundCard";
 // Parse fund size string to get numeric value (in millions)
 function parseFundSize(sizeStr: string): { min: number; max: number } {
   if (sizeStr.includes("< $50M")) return { min: 0, max: 50 };
-  if (sizeStr.includes("> $500M")) return { min: 500, max: 10000 };
+  if (sizeStr.includes("> $1B")) return { min: 1000, max: 100000 };
+  if (sizeStr.includes("$500M - $1B")) return { min: 500, max: 1000 };
+  if (sizeStr.includes("$200M - $500M")) return { min: 200, max: 500 };
+  if (sizeStr.includes("$100M - $200M")) return { min: 100, max: 200 };
+  if (sizeStr.includes("$50M - $100M")) return { min: 50, max: 100 };
 
-  const match = sizeStr.match(/\$(\d+)M?\s*-\s*\$(\d+)M?/);
+  // Fallback regex for other formats
+  const match = sizeStr.match(/\$(\d+)([MB]?)?\s*-\s*\$(\d+)([MB]?)?/);
   if (match) {
-    return { min: parseInt(match[1]), max: parseInt(match[2]) };
+    let min = parseInt(match[1]);
+    let max = parseInt(match[3]);
+    // Handle B (billions)
+    if (match[2] === "B") min *= 1000;
+    if (match[4] === "B") max *= 1000;
+    return { min, max };
   }
-  return { min: 0, max: 10000 };
+  return { min: 0, max: 100000 };
 }
 
 // Check if fund size falls within LP's preferred range
@@ -37,24 +47,25 @@ function shuffleArray<T>(array: T[]): T[] {
   return shuffled;
 }
 
-// Fair scoring algorithm - no bias toward large/established funds
+// Scoring algorithm - fund size is a HARD FILTER (applied separately)
+// This scores based on stage, sector, geography, and manager preference
 function calculateScore(fund: Fund, lpProfile: NonNullable<ReturnType<typeof useApp>["lpProfile"]>): number {
   let score = 0;
   let maxScore = 0;
 
-  // Stage match (30 points max) - most important
-  maxScore += 30;
+  // Stage match (40 points max) - most important
+  maxScore += 40;
   const stageMatches = fund.stage.filter((s) => lpProfile.stages.includes(s)).length;
   if (stageMatches > 0) {
-    score += Math.min(30, stageMatches * 15);
+    score += Math.min(40, stageMatches * 20);
   }
 
-  // Sector match (30 points max) - weighted by overlap percentage
-  maxScore += 30;
+  // Sector match (40 points max) - weighted by overlap percentage
+  maxScore += 40;
   const sectorMatches = fund.sectors.filter((s) => lpProfile.sectors.includes(s)).length;
   if (lpProfile.sectors.length > 0 && fund.sectors.length > 0) {
     const sectorOverlapRatio = sectorMatches / Math.min(fund.sectors.length, lpProfile.sectors.length);
-    score += Math.round(sectorOverlapRatio * 30);
+    score += Math.round(sectorOverlapRatio * 40);
   }
 
   // Geography match (20 points)
@@ -65,14 +76,7 @@ function calculateScore(fund: Fund, lpProfile: NonNullable<ReturnType<typeof use
     score += 20;
   }
 
-  // Fund size match (20 points) - respect LP preferences
-  maxScore += 20;
-  if (fundSizeInRange(fund.fundSize, lpProfile.fundSizeMin, lpProfile.fundSizeMax)) {
-    score += 20;
-  }
-
   // Manager preference - ONLY apply if LP has a preference
-  // This ensures no inherent bias toward established funds
   if (lpProfile.preferEmerging || lpProfile.preferEstablished) {
     maxScore += 20;
     const isEmerging = fund.tier === "emerging";
@@ -83,8 +87,7 @@ function calculateScore(fund: Fund, lpProfile: NonNullable<ReturnType<typeof use
     } else if (lpProfile.preferEstablished && isEstablished) {
       score += 20;
     } else if (lpProfile.preferEmerging && lpProfile.preferEstablished) {
-      // Wants both
-      score += 20;
+      score += 20; // Wants both
     }
   }
 
@@ -105,10 +108,17 @@ export default function SwipeInterface() {
   const [isDragging, setIsDragging] = useState(false);
 
   // Filter and score funds based on LP profile
+  // Fund size is a HARD FILTER - funds outside the range are NOT shown
   const rankedFunds = useMemo(() => {
     if (!lpProfile) return FUNDS.map((fund) => ({ fund, score: 50 }));
 
-    return FUNDS.map((fund) => ({
+    // HARD FILTER: Only include funds within the LP's fund size range
+    const fundSizeFiltered = FUNDS.filter((fund) =>
+      fundSizeInRange(fund.fundSize, lpProfile.fundSizeMin, lpProfile.fundSizeMax)
+    );
+
+    // Score and sort the filtered funds
+    return fundSizeFiltered.map((fund) => ({
       fund,
       score: calculateScore(fund, lpProfile),
     })).sort((a, b) => b.score - a.score);

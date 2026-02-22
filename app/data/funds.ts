@@ -21,19 +21,19 @@ export const FUNDS: Fund[] = [
     id: "craft-ventures",
     name: "Craft Ventures",
     firm: "Craft Ventures",
-    stage: ["Seed", "Series A"],
+    stage: ["Seed", "Series A", "Growth"],
     sectors: ["SaaS", "Enterprise", "Fintech"],
     geography: "US",
-    fundSize: "$300M - $500M",
-    checkSize: "$5M - $25M",
+    fundSize: "> $1B",
+    checkSize: "$5M - $50M",
     fundNumber: "Fund IV",
     gps: [
       { name: "David Sacks", background: "PayPal, Yammer founder" },
       { name: "Bill Lee", background: "Former CFO at various startups" },
     ],
     thesis: "Backing founders building transformative B2B software companies",
-    notablePortfolio: ["Figma", "ClickUp", "Sourcegraph"],
-    lpFit: ["Family Office", "Endowment", "Fund of Funds"],
+    notablePortfolio: ["SpaceX", "Palantir", "ClickUp"],
+    lpFit: ["Endowment", "Pension", "Fund of Funds"],
     tier: "elite",
   },
   {
@@ -80,7 +80,7 @@ export const FUNDS: Fund[] = [
     stage: ["Seed"],
     sectors: ["Consumer", "Enterprise", "Fintech", "Health"],
     geography: "US",
-    fundSize: "$300M - $500M",
+    fundSize: "$500M - $1B",
     checkSize: "$1M - $10M",
     fundNumber: "Fund XII",
     gps: [
@@ -99,7 +99,7 @@ export const FUNDS: Fund[] = [
     stage: ["Pre-seed", "Seed"],
     sectors: ["Generalist"],
     geography: "US",
-    fundSize: "$200M - $400M",
+    fundSize: "$200M - $500M",
     checkSize: "$500K - $3M",
     fundNumber: "Fund V",
     gps: [
@@ -118,7 +118,7 @@ export const FUNDS: Fund[] = [
     stage: ["Seed", "Series A"],
     sectors: ["Consumer", "Commerce", "Health"],
     geography: "US",
-    fundSize: "$300M - $500M",
+    fundSize: "$200M - $500M",
     checkSize: "$3M - $15M",
     fundNumber: "Fund VI",
     gps: [
@@ -156,7 +156,7 @@ export const FUNDS: Fund[] = [
     stage: ["Pre-seed"],
     sectors: ["Developer Tools", "Fintech", "SaaS"],
     geography: "US",
-    fundSize: "$25M - $50M",
+    fundSize: "< $50M",
     checkSize: "$250K - $750K",
     fundNumber: "Fund III",
     gps: [
@@ -175,7 +175,7 @@ export const FUNDS: Fund[] = [
     stage: ["Seed", "Series A"],
     sectors: ["Marketplace", "Crypto", "Climate"],
     geography: "US",
-    fundSize: "$200M - $400M",
+    fundSize: "$500M - $1B",
     checkSize: "$3M - $15M",
     fundNumber: "Fund 2023",
     gps: [
@@ -213,7 +213,7 @@ export const FUNDS: Fund[] = [
     stage: ["Seed", "Series A", "Growth"],
     sectors: ["Consumer", "Enterprise", "Media"],
     geography: "US",
-    fundSize: "$300M - $500M",
+    fundSize: "$200M - $500M",
     checkSize: "$1M - $25M",
     fundNumber: "Fund VII",
     gps: [
@@ -251,7 +251,7 @@ export const FUNDS: Fund[] = [
     stage: ["Seed", "Series A", "Growth"],
     sectors: ["Cyber", "Enterprise", "Health"],
     geography: "Israel",
-    fundSize: "$200M - $400M",
+    fundSize: "$200M - $500M",
     checkSize: "$5M - $20M",
     fundNumber: "Fund IX",
     gps: [
@@ -270,7 +270,7 @@ export const FUNDS: Fund[] = [
     stage: ["Seed", "Series A"],
     sectors: ["Enterprise", "Health", "Fintech"],
     geography: "Israel",
-    fundSize: "$200M - $400M",
+    fundSize: "$200M - $500M",
     checkSize: "$3M - $15M",
     fundNumber: "Fund VIII",
     gps: [
@@ -313,7 +313,7 @@ export const FUND_SIZES = [
   "< $50M",
   "$50M - $100M",
   "$100M - $200M",
-  "$200M - $400M",
-  "$300M - $500M",
-  "> $500M",
+  "$200M - $500M",
+  "$500M - $1B",
+  "> $1B",
 ];

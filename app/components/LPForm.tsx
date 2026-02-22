@@ -44,8 +44,8 @@ export default function LPForm() {
     stages: [] as string[],
     sectors: [] as string[],
     geography: [] as string[],
-    fundSizeMin: "$50M - $100M",
-    fundSizeMax: "$300M - $500M",
+    fundSizeMin: "< $50M",
+    fundSizeMax: "> $1B",
     preferEmerging: false,
     preferEstablished: false,
   });
