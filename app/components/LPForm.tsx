@@ -73,8 +73,8 @@ export default function LPForm() {
     { title: "Who are you?", key: "type" },
     { title: "What stages?", key: "stages" },
     { title: "Which sectors?", key: "sectors" },
-    { title: "Where?", key: "geography" },
-    { title: "Fund size & preferences", key: "preferences" },
+    { title: "Fund size range", key: "fundsize" },
+    { title: "Geography & preferences", key: "geography" },
   ];
 
   const canProceed = () => {
@@ -82,8 +82,8 @@ export default function LPForm() {
       case 0: return formData.type !== "";
       case 1: return formData.stages.length > 0;
       case 2: return formData.sectors.length > 0;
-      case 3: return true; // Geography is optional
-      case 4: return true;
+      case 3: return true; // Fund size has defaults
+      case 4: return true; // Geography & preferences are optional
       default: return false;
     }
   };
@@ -224,118 +224,134 @@ export default function LPForm() {
             </div>
           </div>
 
-          {/* Section 3: Geography */}
+          {/* Section 3: Fund Size */}
           <div className={`transition-all duration-500 ${currentSection === 3 ? "opacity-100 translate-y-0" : "opacity-0 absolute -translate-y-10 pointer-events-none"}`}>
             <div className="bg-gray-900/60 backdrop-blur-xl border border-gray-800 rounded-2xl p-6 shadow-2xl">
-              <h2 className="text-2xl font-bold text-white mb-2">Geography</h2>
-              <p className="text-gray-400 mb-6">Where do you want exposure? (optional)</p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                {GEOGRAPHIES.map((geo, idx) => (
-                  <button
-                    key={geo}
-                    type="button"
-                    onClick={() => toggleArrayField("geography", geo)}
-                    className={`relative p-5 rounded-xl text-center transition-all duration-300 transform hover:scale-105 border-2 overflow-hidden ${
-                      formData.geography.includes(geo)
-                        ? `bg-gradient-to-br ${geoColors[geo]} border-transparent shadow-lg`
-                        : "bg-gray-800/50 border-gray-700 hover:border-gray-500"
-                    }`}
-                    style={{ animationDelay: `${idx * 100}ms` }}
+              <h2 className="text-2xl font-bold text-white mb-2">Fund Size Range</h2>
+              <p className="text-gray-400 mb-6">What size funds are you targeting?</p>
+
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                <div>
+                  <label className="text-gray-400 text-sm mb-2 block">Minimum</label>
+                  <select
+                    value={formData.fundSizeMin}
+                    onChange={(e) => setFormData({ ...formData, fundSizeMin: e.target.value })}
+                    className="w-full bg-gray-800 text-white rounded-xl p-4 border border-gray-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all text-lg"
                   >
-                    <span className="text-3xl mb-2 block">
-                      {geo === "US" && "🇺🇸"}
-                      {geo === "Europe" && "🇪🇺"}
-                      {geo === "Israel" && "🇮🇱"}
-                      {geo === "Asia" && "🌏"}
-                      {geo === "Global" && "🌍"}
-                    </span>
-                    <span className={`text-lg font-semibold ${formData.geography.includes(geo) ? "text-white" : "text-gray-300"}`}>
-                      {geo}
-                    </span>
-                  </button>
-                ))}
+                    {FUND_SIZES.map((size) => (
+                      <option key={size} value={size}>
+                        {size}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-gray-400 text-sm mb-2 block">Maximum</label>
+                  <select
+                    value={formData.fundSizeMax}
+                    onChange={(e) => setFormData({ ...formData, fundSizeMax: e.target.value })}
+                    className="w-full bg-gray-800 text-white rounded-xl p-4 border border-gray-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all text-lg"
+                  >
+                    {FUND_SIZES.map((size) => (
+                      <option key={size} value={size}>
+                        {size}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Visual fund size indicator */}
+              <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700">
+                <div className="flex justify-between text-sm text-gray-400 mb-2">
+                  <span>Your range:</span>
+                  <span className="text-cyan-400 font-semibold">{formData.fundSizeMin} — {formData.fundSizeMax}</span>
+                </div>
+                <div className="h-3 bg-gray-700 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full transition-all"
+                    style={{
+                      width: `${((FUND_SIZES.indexOf(formData.fundSizeMax) + 1) / FUND_SIZES.length) * 100}%`,
+                      marginLeft: `${(FUND_SIZES.indexOf(formData.fundSizeMin) / FUND_SIZES.length) * 100}%`
+                    }}
+                  />
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Section 4: Fund Size & Preferences */}
+          {/* Section 4: Geography & Preferences */}
           <div className={`transition-all duration-500 ${currentSection === 4 ? "opacity-100 translate-y-0" : "opacity-0 absolute -translate-y-10 pointer-events-none"}`}>
             <div className="bg-gray-900/60 backdrop-blur-xl border border-gray-800 rounded-2xl p-6 shadow-2xl">
-              <h2 className="text-2xl font-bold text-white mb-6">Final Details</h2>
+              <h2 className="text-2xl font-bold text-white mb-2">Final Details</h2>
+              <p className="text-gray-400 mb-6">Geography & manager preferences</p>
 
-              {/* Fund Size */}
-              <div className="mb-8">
-                <h3 className="text-lg font-semibold text-white mb-4">Fund Size Range</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-gray-400 text-sm mb-2 block">Minimum</label>
-                    <select
-                      value={formData.fundSizeMin}
-                      onChange={(e) => setFormData({ ...formData, fundSizeMin: e.target.value })}
-                      className="w-full bg-gray-800 text-white rounded-xl p-4 border border-gray-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+              {/* Geography */}
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-white mb-3">Geography <span className="text-gray-500 text-sm font-normal">(optional)</span></h3>
+                <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
+                  {GEOGRAPHIES.map((geo, idx) => (
+                    <button
+                      key={geo}
+                      type="button"
+                      onClick={() => toggleArrayField("geography", geo)}
+                      className={`relative p-3 rounded-xl text-center transition-all duration-300 transform hover:scale-105 border-2 overflow-hidden ${
+                        formData.geography.includes(geo)
+                          ? `bg-gradient-to-br ${geoColors[geo]} border-transparent shadow-lg`
+                          : "bg-gray-800/50 border-gray-700 hover:border-gray-500"
+                      }`}
+                      style={{ animationDelay: `${idx * 100}ms` }}
                     >
-                      {FUND_SIZES.map((size) => (
-                        <option key={size} value={size}>
-                          {size}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-gray-400 text-sm mb-2 block">Maximum</label>
-                    <select
-                      value={formData.fundSizeMax}
-                      onChange={(e) => setFormData({ ...formData, fundSizeMax: e.target.value })}
-                      className="w-full bg-gray-800 text-white rounded-xl p-4 border border-gray-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
-                    >
-                      {FUND_SIZES.map((size) => (
-                        <option key={size} value={size}>
-                          {size}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                      <span className="text-2xl block">
+                        {geo === "US" && "🇺🇸"}
+                        {geo === "Europe" && "🇪🇺"}
+                        {geo === "Israel" && "🇮🇱"}
+                        {geo === "Asia" && "🌏"}
+                        {geo === "Global" && "🌍"}
+                      </span>
+                      <span className={`text-xs font-semibold ${formData.geography.includes(geo) ? "text-white" : "text-gray-400"}`}>
+                        {geo}
+                      </span>
+                    </button>
+                  ))}
                 </div>
               </div>
 
               {/* Manager Preference */}
               <div>
-                <h3 className="text-lg font-semibold text-white mb-4">Manager Preference</h3>
+                <h3 className="text-lg font-semibold text-white mb-3">Manager Type <span className="text-gray-500 text-sm font-normal">(optional)</span></h3>
                 <div className="grid grid-cols-2 gap-4">
                   <button
                     type="button"
                     onClick={() => setFormData({ ...formData, preferEmerging: !formData.preferEmerging })}
-                    className={`p-5 rounded-xl text-center transition-all duration-300 border-2 ${
+                    className={`p-4 rounded-xl text-center transition-all duration-300 border-2 ${
                       formData.preferEmerging
                         ? "bg-gradient-to-br from-purple-600/30 to-pink-600/30 border-purple-400"
                         : "bg-gray-800/50 border-gray-700 hover:border-gray-500"
                     }`}
                   >
-                    <span className="text-2xl mb-2 block">🚀</span>
+                    <span className="text-2xl mb-1 block">🚀</span>
                     <span className={`font-semibold ${formData.preferEmerging ? "text-white" : "text-gray-300"}`}>
                       Emerging
                     </span>
-                    <span className="block text-xs text-gray-500 mt-1">Fund I-II</span>
+                    <span className="block text-xs text-gray-500">Fund I-II</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => setFormData({ ...formData, preferEstablished: !formData.preferEstablished })}
-                    className={`p-5 rounded-xl text-center transition-all duration-300 border-2 ${
+                    className={`p-4 rounded-xl text-center transition-all duration-300 border-2 ${
                       formData.preferEstablished
                         ? "bg-gradient-to-br from-blue-600/30 to-cyan-600/30 border-blue-400"
                         : "bg-gray-800/50 border-gray-700 hover:border-gray-500"
                     }`}
                   >
-                    <span className="text-2xl mb-2 block">🏛️</span>
+                    <span className="text-2xl mb-1 block">🏛️</span>
                     <span className={`font-semibold ${formData.preferEstablished ? "text-white" : "text-gray-300"}`}>
                       Established
                     </span>
-                    <span className="block text-xs text-gray-500 mt-1">Fund III+</span>
+                    <span className="block text-xs text-gray-500">Fund III+</span>
                   </button>
                 </div>
-                <p className="text-xs text-gray-500 mt-3 text-center">
-                  Select both or neither if you&apos;re open to all
-                </p>
               </div>
             </div>
           </div>
