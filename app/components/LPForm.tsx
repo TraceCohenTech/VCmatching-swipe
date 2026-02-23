@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useApp } from "../context/AppContext";
-import { STAGES, SECTORS, GEOGRAPHIES, LP_TYPES } from "../data/funds";
-import NeuralBackground from "./NeuralBackground";
+import { STAGES, SECTORS, LP_TYPES } from "../data/funds";
 
 const FUND_SIZE_VALUES = [
   { label: "<$50M", value: 50 },
@@ -14,41 +13,12 @@ const FUND_SIZE_VALUES = [
   { label: "$1B+", value: 10000 },
 ];
 
-const sectorColors: Record<string, string> = {
-  SaaS: "from-blue-500 to-blue-600",
-  Enterprise: "from-indigo-500 to-indigo-600",
-  Fintech: "from-emerald-500 to-emerald-600",
-  Consumer: "from-pink-500 to-pink-600",
-  Health: "from-red-500 to-red-600",
-  Climate: "from-green-500 to-green-600",
-  "Developer Tools": "from-violet-500 to-violet-600",
-  Marketplace: "from-orange-500 to-orange-600",
-  Media: "from-fuchsia-500 to-fuchsia-600",
-  Security: "from-slate-500 to-slate-600",
-  Crypto: "from-amber-500 to-amber-600",
-  Cyber: "from-cyan-500 to-cyan-600",
-  Generalist: "from-gray-500 to-gray-600",
-};
-
-const stageColors: Record<string, string> = {
-  "Pre-seed": "from-purple-500 to-purple-600",
-  Seed: "from-blue-500 to-cyan-500",
-  "Series A": "from-teal-500 to-emerald-500",
-  Growth: "from-orange-500 to-red-500",
-};
-
-const geoEmojis: Record<string, string> = {
-  US: "🇺🇸",
-  Europe: "🇪🇺",
-  Israel: "🇮🇱",
-  Asia: "🌏",
-  Global: "🌍",
-};
-
 export default function LPForm() {
   const { setLPProfile, setCurrentStep } = useApp();
   const [currentSection, setCurrentSection] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
+  const [ledActive, setLedActive] = useState(false);
+  const [screenText, setScreenText] = useState("SYSTEM READY... AWAITING INPUT");
 
   useEffect(() => {
     setIsVisible(true);
@@ -65,7 +35,22 @@ export default function LPForm() {
     preferEstablished: false,
   });
 
-  const toggleArrayField = (field: "stages" | "sectors" | "geography", value: string) => {
+  // Update screen text based on selections
+  useEffect(() => {
+    if (formData.type) {
+      setLedActive(true);
+      const parts = [];
+      parts.push(`TYPE: ${formData.type.toUpperCase()}`);
+      if (formData.stages.length > 0) parts.push(`STAGES: ${formData.stages.length}`);
+      if (formData.sectors.length > 0) parts.push(`SECTORS: ${formData.sectors.length}`);
+      setScreenText(parts.join(" | "));
+    } else {
+      setLedActive(false);
+      setScreenText("SYSTEM READY... AWAITING INPUT");
+    }
+  }, [formData]);
+
+  const toggleArrayField = (field: "stages" | "sectors", value: string) => {
     const current = formData[field];
     if (current.includes(value)) {
       setFormData({ ...formData, [field]: current.filter((v) => v !== value) });
@@ -77,9 +62,11 @@ export default function LPForm() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.type || formData.stages.length === 0 || formData.sectors.length === 0) {
-      alert("Please complete all required sections");
+      setScreenText("ERROR: COMPLETE ALL FIELDS");
       return;
     }
+
+    setScreenText("INITIALIZING MATCH ALGORITHM...");
 
     const minVal = FUND_SIZE_VALUES[formData.fundSizeMin].value;
     const maxVal = FUND_SIZE_VALUES[formData.fundSizeMax].value;
@@ -101,20 +88,21 @@ export default function LPForm() {
     else if (maxVal <= 1000) fundSizeMax = "$500M - $1B";
     else fundSizeMax = "> $1B";
 
-    setLPProfile({
-      ...formData,
-      fundSizeMin,
-      fundSizeMax,
-    });
-    setCurrentStep("swipe");
+    setTimeout(() => {
+      setLPProfile({
+        ...formData,
+        fundSizeMin,
+        fundSizeMax,
+      });
+      setCurrentStep("swipe");
+    }, 500);
   };
 
   const sections = [
-    { title: "I am a...", key: "type" },
-    { title: "Stages", key: "stages" },
-    { title: "Sectors", key: "sectors" },
-    { title: "Fund Size", key: "fundsize" },
-    { title: "Geography", key: "geography" },
+    { title: "Investor Type", key: "type" },
+    { title: "Investment Stages", key: "stages" },
+    { title: "Target Sectors", key: "sectors" },
+    { title: "Fund Size Range", key: "fundsize" },
   ];
 
   const canProceed = () => {
@@ -123,296 +111,268 @@ export default function LPForm() {
       case 1: return formData.stages.length > 0;
       case 2: return formData.sectors.length > 0;
       case 3: return true;
-      case 4: return true;
       default: return false;
     }
   };
 
   return (
-    <div className={`min-h-screen min-h-[100dvh] bg-gray-950 flex flex-col overflow-y-auto overflow-x-hidden transition-opacity duration-500 ${isVisible ? "opacity-100" : "opacity-0"}`}>
-      {/* Canvas-based neural network background */}
-      <NeuralBackground />
+    <div className={`min-h-screen min-h-[100dvh] bg-[#0f1419] flex items-center justify-center p-4 md:p-6 transition-opacity duration-500 ${isVisible ? "opacity-100" : "opacity-0"}`}>
+      <div className="device-panel p-6 md:p-10 w-full max-w-lg">
+        {/* Screws */}
+        <div className="screw tl" />
+        <div className="screw tr" />
+        <div className="screw bl" />
+        <div className="screw br" />
 
-      {/* Main content - centered */}
-      <div className="flex-1 flex flex-col justify-center px-4 py-4 md:px-6 md:py-8 relative z-10">
-        <div className="max-w-lg mx-auto w-full">
-          {/* Header */}
-          <div className={`flex items-center gap-3 md:gap-5 mb-4 md:mb-6 transform transition-all duration-500 ${isVisible ? "translate-y-0 opacity-100" : "-translate-y-5 opacity-0"}`}>
-            <img
-              src="https://i.etsystatic.com/14159953/r/il/30a07b/3187685073/il_fullxfull.3187685073_dulk.jpg"
-              alt="Choose your starter"
-              className="w-20 h-20 md:w-40 md:h-40 rounded-xl md:rounded-2xl shadow-2xl border-2 border-cyan-500/30 object-cover flex-shrink-0"
-            />
-            <div className="min-w-0">
-              <h1 className="text-2xl md:text-5xl font-black text-white mb-1 md:mb-2">
-                LP <span className="bg-gradient-to-r from-blue-400 via-cyan-400 to-teal-400 bg-clip-text text-transparent">Match</span>
-              </h1>
-              <p className="text-sm md:text-lg text-gray-400">Find your perfect VC match</p>
-            </div>
-          </div>
+        {/* LED Indicator */}
+        <div className={`led absolute top-6 right-6 ${ledActive ? "active animate-led-pulse" : ""}`} />
 
-          {/* Progress bar */}
-          <div className="flex items-center gap-2 md:gap-3 mb-4 md:mb-6">
+        {/* CRT Screen Header */}
+        <div className="crt-screen p-4 md:p-5 mb-6 text-center">
+          <h1 className="text-xl md:text-2xl font-bold uppercase tracking-wider mb-2 animate-text-pulse relative z-10">
+            LP Matchmaker
+          </h1>
+          <p className="text-sm opacity-80 relative z-10">{screenText}</p>
+        </div>
+
+        {/* Progress Indicator */}
+        <div className="mb-6">
+          <div className="flex items-center gap-2 mb-2">
             {sections.map((s, i) => (
               <button
                 key={s.key}
                 onClick={() => i < currentSection && setCurrentSection(i)}
-                className={`h-2 rounded-full transition-all ${
+                className={`h-3 rounded-full transition-all ${
                   i === currentSection
-                    ? "flex-[2] bg-gradient-to-r from-blue-500 to-cyan-500"
+                    ? "flex-[2] bg-gradient-to-r from-blue-500 to-blue-500"
                     : i < currentSection
-                    ? "flex-1 bg-cyan-600 cursor-pointer hover:bg-cyan-500"
-                    : "flex-1 bg-gray-700"
+                    ? "flex-1 bg-blue-500 cursor-pointer hover:bg-blue-400"
+                    : "flex-1 bg-[#0a0f14]"
                 }`}
+                style={{
+                  boxShadow: i <= currentSection
+                    ? "0 0 8px rgba(59,130,246,0.4)"
+                    : "inset 2px 2px 4px rgba(0,0,0,0.5)"
+                }}
+                title={s.title}
               />
             ))}
-            <span className="text-sm text-gray-400 ml-2">{currentSection + 1}/{sections.length}</span>
+            <span className="text-sm text-gray-400 ml-2 font-mono">{currentSection + 1}/{sections.length}</span>
+          </div>
+          {/* Step labels */}
+          <div className="flex gap-2">
+            {sections.map((s, i) => (
+              <span
+                key={s.key}
+                className={`text-[10px] transition-all ${
+                  i === currentSection
+                    ? "flex-[2] text-blue-400 font-medium"
+                    : i < currentSection
+                    ? "flex-1 text-gray-500"
+                    : "flex-1 text-gray-600"
+                }`}
+              >
+                {i === currentSection ? s.title : ""}
+              </span>
+            ))}
+            <span className="w-12" /> {/* Spacer for the counter */}
+          </div>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit}>
+          <div className="relative min-h-[280px]">
+            {/* Section 0: LP Type */}
+            <div className={`transition-all duration-300 ${currentSection === 0 ? "opacity-100" : "opacity-0 absolute inset-0 pointer-events-none"}`}>
+              <label className="neu-label">{sections[0].title}</label>
+              <div className="grid grid-cols-2 gap-3">
+                {LP_TYPES.map((type) => (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, type })}
+                    className={`neu-select-btn text-left ${formData.type === type ? "selected" : ""}`}
+                  >
+                    {type}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Section 1: Stages */}
+            <div className={`transition-all duration-300 ${currentSection === 1 ? "opacity-100" : "opacity-0 absolute inset-0 pointer-events-none"}`}>
+              <label className="neu-label">{sections[1].title}</label>
+              <div className="grid grid-cols-2 gap-3">
+                {STAGES.map((stage) => (
+                  <button
+                    key={stage}
+                    type="button"
+                    onClick={() => toggleArrayField("stages", stage)}
+                    className={`neu-select-btn text-center ${formData.stages.includes(stage) ? "selected" : ""}`}
+                  >
+                    {stage}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Section 2: Sectors */}
+            <div className={`transition-all duration-300 ${currentSection === 2 ? "opacity-100" : "opacity-0 absolute inset-0 pointer-events-none"}`}>
+              <label className="neu-label">
+                {sections[2].title}
+                {formData.sectors.length > 0 && (
+                  <span className="text-blue-600 ml-2">({formData.sectors.length} selected)</span>
+                )}
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {SECTORS.map((sector) => (
+                  <button
+                    key={sector}
+                    type="button"
+                    onClick={() => toggleArrayField("sectors", sector)}
+                    className={`px-3 py-2 rounded-lg text-sm font-semibold transition-all ${
+                      formData.sectors.includes(sector)
+                        ? "bg-gradient-to-r from-blue-500 to-cyan-500 text-white"
+                        : "bg-[#0f1419] text-gray-400 hover:text-white border border-transparent hover:border-blue-500/30"
+                    }`}
+                    style={{
+                      boxShadow: formData.sectors.includes(sector)
+                        ? "0 0 15px rgba(59,130,246,0.4)"
+                        : "inset 2px 2px 4px rgba(0,0,0,0.4)"
+                    }}
+                  >
+                    {sector}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Section 3: Fund Size */}
+            <div className={`transition-all duration-300 ${currentSection === 3 ? "opacity-100" : "opacity-0 absolute inset-0 pointer-events-none"}`}>
+              <label className="neu-label">{sections[3].title}</label>
+              <div className="neu-card-inset p-4 mb-4 text-center">
+                <span className="text-xl md:text-2xl font-black text-blue-600">
+                  {FUND_SIZE_VALUES[formData.fundSizeMin].label} — {FUND_SIZE_VALUES[formData.fundSizeMax].label}
+                </span>
+              </div>
+              <p className="text-gray-400 text-xs mb-2">Click to set range boundaries:</p>
+              <div className="flex mb-4 rounded-xl overflow-hidden border border-gray-800" style={{ boxShadow: "inset 3px 3px 6px rgba(0,0,0,0.5)" }}>
+                {FUND_SIZE_VALUES.map((size, i) => (
+                  <button
+                    key={size.label}
+                    type="button"
+                    onClick={() => {
+                      // If clicking outside current range, expand to include it
+                      // If clicking inside range, set as new boundary (closer to edges)
+                      if (i < formData.fundSizeMin) {
+                        setFormData({ ...formData, fundSizeMin: i });
+                      } else if (i > formData.fundSizeMax) {
+                        setFormData({ ...formData, fundSizeMax: i });
+                      } else {
+                        // Clicking inside range - determine which boundary to move
+                        const distToMin = i - formData.fundSizeMin;
+                        const distToMax = formData.fundSizeMax - i;
+                        if (distToMin <= distToMax) {
+                          setFormData({ ...formData, fundSizeMin: i });
+                        } else {
+                          setFormData({ ...formData, fundSizeMax: i });
+                        }
+                      }
+                    }}
+                    className={`flex-1 py-3 text-xs font-bold transition-all ${
+                      i >= formData.fundSizeMin && i <= formData.fundSizeMax
+                        ? "bg-gradient-to-b from-blue-400 to-blue-500 text-white"
+                        : "bg-transparent text-gray-400 hover:text-gray-200"
+                    }`}
+                  >
+                    {size.label}
+                  </button>
+                ))}
+              </div>
+              <div className="space-y-3">
+                <div className="flex items-center gap-4">
+                  <span className="text-xs text-gray-400 w-10 font-mono">MIN</span>
+                  <input
+                    type="range" min="0" max="5" value={formData.fundSizeMin}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value);
+                      if (val <= formData.fundSizeMax) setFormData({ ...formData, fundSizeMin: val });
+                    }}
+                    className="flex-1 h-3 rounded-lg appearance-none cursor-pointer"
+                    style={{ background: "#0a0f14", boxShadow: "inset 2px 2px 4px rgba(0,0,0,0.5)" }}
+                  />
+                </div>
+                <div className="flex items-center gap-4">
+                  <span className="text-xs text-gray-400 w-10 font-mono">MAX</span>
+                  <input
+                    type="range" min="0" max="5" value={formData.fundSizeMax}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value);
+                      if (val >= formData.fundSizeMin) setFormData({ ...formData, fundSizeMax: val });
+                    }}
+                    className="flex-1 h-3 rounded-lg appearance-none cursor-pointer"
+                    style={{ background: "#0a0f14", boxShadow: "inset 2px 2px 4px rgba(0,0,0,0.5)" }}
+                  />
+                </div>
+              </div>
+            </div>
+
           </div>
 
-          {/* Form */}
-          <form onSubmit={handleSubmit}>
-            <div className="relative">
-              {/* Section 0: LP Type */}
-              <div className={`transition-all duration-300 ${currentSection === 0 ? "opacity-100" : "opacity-0 absolute inset-0 pointer-events-none"}`}>
-                <div className="bg-gray-900/90 backdrop-blur-sm border border-gray-700/50 rounded-xl md:rounded-2xl p-4 md:p-6 shadow-2xl">
-                  <h2 className="text-lg md:text-xl font-bold text-white mb-3 md:mb-4">{sections[0].title}</h2>
-                  <div className="grid grid-cols-2 gap-2 md:gap-3">
-                    {LP_TYPES.map((type) => (
-                      <button
-                        key={type}
-                        type="button"
-                        onClick={() => setFormData({ ...formData, type })}
-                        className={`p-3 md:p-4 rounded-lg md:rounded-xl text-left transition-all border-2 ${
-                          formData.type === type
-                            ? "bg-gradient-to-br from-blue-600/30 to-cyan-600/30 border-cyan-400 text-white"
-                            : "bg-gray-800/50 border-gray-700 hover:border-gray-500 text-gray-300"
-                        }`}
-                      >
-                        <span className="text-sm md:text-base font-semibold">{type}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
+          {/* Navigation */}
+          <div className="mt-6 flex justify-between items-center">
+            {currentSection > 0 ? (
+              <button
+                type="button"
+                onClick={() => setCurrentSection(currentSection - 1)}
+                className="neu-btn neu-btn-small flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                Back
+              </button>
+            ) : (
+              <div />
+            )}
 
-              {/* Section 1: Stages */}
-              <div className={`transition-all duration-300 ${currentSection === 1 ? "opacity-100" : "opacity-0 absolute inset-0 pointer-events-none"}`}>
-                <div className="bg-gray-900/90 backdrop-blur-sm border border-gray-700/50 rounded-xl md:rounded-2xl p-4 md:p-6 shadow-2xl">
-                  <h2 className="text-lg md:text-xl font-bold text-white mb-3 md:mb-4">{sections[1].title}</h2>
-                  <div className="grid grid-cols-2 gap-2 md:gap-3">
-                    {STAGES.map((stage) => (
-                      <button
-                        key={stage}
-                        type="button"
-                        onClick={() => toggleArrayField("stages", stage)}
-                        className={`p-3 md:p-4 rounded-lg md:rounded-xl text-center transition-all border-2 ${
-                          formData.stages.includes(stage)
-                            ? `bg-gradient-to-br ${stageColors[stage]} border-transparent text-white`
-                            : "bg-gray-800/50 border-gray-700 hover:border-gray-500 text-gray-300"
-                        }`}
-                      >
-                        <span className="text-base font-bold">{stage}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
+            {currentSection < sections.length - 1 ? (
+              <button
+                type="button"
+                onClick={() => canProceed() && setCurrentSection(currentSection + 1)}
+                disabled={!canProceed()}
+                className={`neu-btn flex items-center gap-2 ${canProceed() ? "neu-btn-primary" : ""}`}
+              >
+                Continue
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            ) : (
+              <button
+                type="submit"
+                className="neu-btn neu-btn-primary flex items-center gap-2"
+              >
+                Initialize Search
+                <span>🎯</span>
+              </button>
+            )}
+          </div>
+        </form>
 
-              {/* Section 2: Sectors */}
-              <div className={`transition-all duration-300 ${currentSection === 2 ? "opacity-100" : "opacity-0 absolute inset-0 pointer-events-none"}`}>
-                <div className="bg-gray-900/90 backdrop-blur-sm border border-gray-700/50 rounded-xl md:rounded-2xl p-4 md:p-6 shadow-2xl">
-                  <h2 className="text-lg md:text-xl font-bold text-white mb-3 md:mb-4">
-                    {sections[2].title}
-                    <span className="text-cyan-400 text-sm md:text-base font-normal ml-2">({formData.sectors.length})</span>
-                  </h2>
-                  <div className="flex flex-wrap gap-1.5 md:gap-2">
-                    {SECTORS.map((sector) => (
-                      <button
-                        key={sector}
-                        type="button"
-                        onClick={() => toggleArrayField("sectors", sector)}
-                        className={`px-3 py-1.5 md:px-4 md:py-2 rounded-full text-xs md:text-sm font-semibold transition-all ${
-                          formData.sectors.includes(sector)
-                            ? `bg-gradient-to-r ${sectorColors[sector]} text-white shadow-md`
-                            : "bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white border border-gray-700"
-                        }`}
-                      >
-                        {sector}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Section 3: Fund Size */}
-              <div className={`transition-all duration-300 ${currentSection === 3 ? "opacity-100" : "opacity-0 absolute inset-0 pointer-events-none"}`}>
-                <div className="bg-gray-900/90 backdrop-blur-sm border border-gray-700/50 rounded-xl md:rounded-2xl p-4 md:p-6 shadow-2xl">
-                  <h2 className="text-lg md:text-xl font-bold text-white mb-2 md:mb-3">{sections[3].title}</h2>
-                  <div className="text-center mb-3 md:mb-4">
-                    <span className="text-xl md:text-2xl font-black bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
-                      {FUND_SIZE_VALUES[formData.fundSizeMin].label} — {FUND_SIZE_VALUES[formData.fundSizeMax].label}
-                    </span>
-                  </div>
-                  <div className="flex mb-3 md:mb-4">
-                    {FUND_SIZE_VALUES.map((size, i) => (
-                      <button
-                        key={size.label}
-                        type="button"
-                        onClick={() => {
-                          if (i <= formData.fundSizeMax) setFormData({ ...formData, fundSizeMin: i });
-                        }}
-                        className={`flex-1 py-2 md:py-3 text-[10px] md:text-xs font-bold transition-all ${
-                          i >= formData.fundSizeMin && i <= formData.fundSizeMax
-                            ? "bg-gradient-to-b from-cyan-500 to-blue-600 text-white"
-                            : "bg-gray-800 text-gray-500 hover:bg-gray-700"
-                        } ${i === 0 ? "rounded-l-lg md:rounded-l-xl" : ""} ${i === FUND_SIZE_VALUES.length - 1 ? "rounded-r-lg md:rounded-r-xl" : ""}`}
-                      >
-                        {size.label}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="space-y-2 md:space-y-3">
-                    <div className="flex items-center gap-3 md:gap-4">
-                      <span className="text-xs text-gray-400 w-10 md:w-12">Min</span>
-                      <input
-                        type="range" min="0" max="5" value={formData.fundSizeMin}
-                        onChange={(e) => {
-                          const val = parseInt(e.target.value);
-                          if (val <= formData.fundSizeMax) setFormData({ ...formData, fundSizeMin: val });
-                        }}
-                        className="flex-1 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
-                      />
-                    </div>
-                    <div className="flex items-center gap-3 md:gap-4">
-                      <span className="text-xs text-gray-400 w-10 md:w-12">Max</span>
-                      <input
-                        type="range" min="0" max="5" value={formData.fundSizeMax}
-                        onChange={(e) => {
-                          const val = parseInt(e.target.value);
-                          if (val >= formData.fundSizeMin) setFormData({ ...formData, fundSizeMax: val });
-                        }}
-                        className="flex-1 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Section 4: Geography */}
-              <div className={`transition-all duration-300 ${currentSection === 4 ? "opacity-100" : "opacity-0 absolute inset-0 pointer-events-none"}`}>
-                <div className="bg-gray-900/90 backdrop-blur-sm border border-gray-700/50 rounded-xl md:rounded-2xl p-4 md:p-6 shadow-2xl">
-                  <h2 className="text-lg md:text-xl font-bold text-white mb-3 md:mb-4">{sections[4].title}</h2>
-                  <div className="grid grid-cols-5 gap-1.5 md:gap-2 mb-3 md:mb-4">
-                    {GEOGRAPHIES.map((geo) => (
-                      <button
-                        key={geo}
-                        type="button"
-                        onClick={() => toggleArrayField("geography", geo)}
-                        className={`p-2 md:p-3 rounded-lg md:rounded-xl text-center transition-all border-2 ${
-                          formData.geography.includes(geo)
-                            ? "bg-gradient-to-br from-blue-600 to-cyan-600 border-transparent"
-                            : "bg-gray-800/50 border-gray-700 hover:border-gray-500"
-                        }`}
-                      >
-                        <span className="text-lg md:text-2xl block">{geoEmojis[geo]}</span>
-                        <span className={`text-[10px] md:text-xs font-medium ${formData.geography.includes(geo) ? "text-white" : "text-gray-400"}`}>{geo}</span>
-                      </button>
-                    ))}
-                  </div>
-                  <p className="text-[10px] md:text-xs text-gray-500 text-center mb-3 md:mb-4">Select none for all regions</p>
-                  <div className="border-t border-gray-700 pt-3 md:pt-4">
-                    <p className="text-xs md:text-sm text-gray-400 mb-2 md:mb-3">Manager Preference</p>
-                    <div className="grid grid-cols-2 gap-2 md:gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setFormData({ ...formData, preferEmerging: !formData.preferEmerging })}
-                        className={`p-2 md:p-3 rounded-lg md:rounded-xl text-center transition-all border-2 ${
-                          formData.preferEmerging
-                            ? "bg-gradient-to-br from-purple-600/30 to-pink-600/30 border-purple-400"
-                            : "bg-gray-800/50 border-gray-700 hover:border-gray-500"
-                        }`}
-                      >
-                        <span className="text-lg md:text-xl">🚀</span>
-                        <span className={`text-xs md:text-sm font-medium block ${formData.preferEmerging ? "text-white" : "text-gray-400"}`}>Emerging</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setFormData({ ...formData, preferEstablished: !formData.preferEstablished })}
-                        className={`p-2 md:p-3 rounded-lg md:rounded-xl text-center transition-all border-2 ${
-                          formData.preferEstablished
-                            ? "bg-gradient-to-br from-blue-600/30 to-cyan-600/30 border-cyan-400"
-                            : "bg-gray-800/50 border-gray-700 hover:border-gray-500"
-                        }`}
-                      >
-                        <span className="text-lg md:text-xl">🏛️</span>
-                        <span className={`text-xs md:text-sm font-medium block ${formData.preferEstablished ? "text-white" : "text-gray-400"}`}>Established</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Navigation */}
-            <div className="mt-4 md:mt-5 flex justify-between items-center">
-              {currentSection > 0 ? (
-                <button
-                  type="button"
-                  onClick={() => setCurrentSection(currentSection - 1)}
-                  className="px-3 py-2 md:px-4 md:py-2.5 text-gray-400 hover:text-white transition-colors flex items-center gap-1.5 md:gap-2 text-sm md:text-base font-medium"
-                >
-                  <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
-                  Back
-                </button>
-              ) : (
-                <div />
-              )}
-
-              {currentSection < sections.length - 1 ? (
-                <button
-                  type="button"
-                  onClick={() => canProceed() && setCurrentSection(currentSection + 1)}
-                  disabled={!canProceed()}
-                  className={`px-4 py-2.5 md:px-6 md:py-3 rounded-lg md:rounded-xl font-bold text-sm md:text-base flex items-center gap-1.5 md:gap-2 transition-all ${
-                    canProceed()
-                      ? "bg-gradient-to-r from-blue-600 to-cyan-600 text-white hover:from-blue-500 hover:to-cyan-500 shadow-lg shadow-blue-500/25"
-                      : "bg-gray-700 text-gray-500 cursor-not-allowed"
-                  }`}
-                >
-                  Continue
-                  <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-              ) : (
-                <button
-                  type="submit"
-                  className="px-4 py-2.5 md:px-6 md:py-3 rounded-lg md:rounded-xl font-bold text-sm md:text-base bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:from-emerald-400 hover:to-teal-400 shadow-lg shadow-emerald-500/25 transition-all flex items-center gap-1.5 md:gap-2"
-                >
-                  Start Swiping
-                  <span>🎯</span>
-                </button>
+        {/* Selection Summary */}
+        {(formData.type || formData.stages.length > 0) && (
+          <div className="mt-4 neu-card-inset p-3">
+            <div className="text-xs text-gray-400 flex flex-wrap gap-2">
+              {formData.type && <span className="text-gray-200 font-medium">{formData.type}</span>}
+              {formData.stages.length > 0 && <span>• {formData.stages.join(", ")}</span>}
+              {formData.sectors.length > 0 && <span>• {formData.sectors.length} sectors</span>}
+              {(formData.fundSizeMin > 0 || formData.fundSizeMax < 5) && (
+                <span>• {FUND_SIZE_VALUES[formData.fundSizeMin].label}–{FUND_SIZE_VALUES[formData.fundSizeMax].label}</span>
               )}
             </div>
-          </form>
-
-          {/* Selection Summary - only show after first selection */}
-          {(formData.type || formData.stages.length > 0) && (
-            <div className="mt-3 md:mt-4 px-3 py-2 md:px-4 md:py-3 bg-gray-900/70 rounded-lg md:rounded-xl border border-gray-700/50">
-              <div className="text-xs md:text-sm text-gray-400 flex flex-wrap gap-1.5 md:gap-2">
-                {formData.type && <span className="text-white font-medium">{formData.type}</span>}
-                {formData.stages.length > 0 && <span>• {formData.stages.join(", ")}</span>}
-                {formData.sectors.length > 0 && <span>• {formData.sectors.length} sectors</span>}
-                {(formData.fundSizeMin > 0 || formData.fundSizeMax < 5) && (
-                  <span>• {FUND_SIZE_VALUES[formData.fundSizeMin].label}–{FUND_SIZE_VALUES[formData.fundSizeMax].label}</span>
-                )}
-                {formData.geography.length > 0 && <span>• {formData.geography.map(g => geoEmojis[g]).join(" ")}</span>}
-              </div>
-            </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

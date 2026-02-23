@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useToast } from "./Toast";
 
 interface QuizQuestion {
   id: number;
@@ -119,9 +120,11 @@ const PERSONALITIES = {
 
 interface PersonalityQuizProps {
   onComplete: (personality: "hunter" | "architect" | "guardian") => void;
+  onCancel?: () => void;
 }
 
-export default function PersonalityQuiz({ onComplete }: PersonalityQuizProps) {
+export default function PersonalityQuiz({ onComplete, onCancel }: PersonalityQuizProps) {
+  const { showToast } = useToast();
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState<("hunter" | "architect" | "guardian")[]>([]);
   const [showResult, setShowResult] = useState(false);
@@ -206,7 +209,7 @@ export default function PersonalityQuiz({ onComplete }: PersonalityQuizProps) {
                 // Copy to clipboard or trigger share
                 const text = `I'm ${personality.emoji} ${personality.name} - ${personality.title}!\n\nFind your LP personality at lp-fund-matcher.vercel.app`;
                 navigator.clipboard.writeText(text);
-                alert("Copied to clipboard! Share it on Twitter/LinkedIn 🚀");
+                showToast("Copied! Share on Twitter/LinkedIn", "success");
               }}
               className="w-full py-3 bg-white text-gray-900 rounded-xl font-bold hover:bg-gray-100 transition-colors flex items-center justify-center gap-2"
             >
@@ -304,6 +307,14 @@ export default function PersonalityQuiz({ onComplete }: PersonalityQuizProps) {
               >
                 Find My Matches <span>→</span>
               </button>
+              {onCancel && (
+                <button
+                  onClick={onCancel}
+                  className="w-full py-3 bg-transparent text-gray-400 hover:text-white rounded-xl font-medium transition-colors"
+                >
+                  ← Back to Deck
+                </button>
+              )}
             </div>
 
             {/* Stats */}
@@ -338,6 +349,17 @@ export default function PersonalityQuiz({ onComplete }: PersonalityQuizProps) {
       <div className="max-w-lg mx-auto relative">
         {/* Header */}
         <div className="text-center mb-6">
+          {onCancel && (
+            <button
+              onClick={onCancel}
+              className="absolute left-0 top-0 text-gray-400 hover:text-white transition-colors flex items-center gap-1 text-sm"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              Back
+            </button>
+          )}
           <h1 className="text-3xl font-black text-white mb-1">
             LP <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-orange-400 bg-clip-text text-transparent">Personality</span>
           </h1>

@@ -13,58 +13,74 @@ interface FundCardProps {
 
 const tierConfig = {
   emerging: {
-    border: "border-gray-600",
-    badge: "bg-gray-700 text-gray-300",
     label: "Emerging",
-    accent: "bg-gray-700",
+    color: "text-purple-300",
+    bg: "bg-purple-900/50",
   },
   established: {
-    border: "border-slate-500",
-    badge: "bg-slate-600 text-slate-200",
     label: "Established",
-    accent: "bg-slate-600",
+    color: "text-blue-300",
+    bg: "bg-blue-900/50",
   },
   "top-tier": {
-    border: "border-blue-500",
-    badge: "bg-blue-600 text-white",
     label: "Top Tier",
-    accent: "bg-blue-600",
+    color: "text-blue-300",
+    bg: "bg-blue-900/50",
   },
   elite: {
-    border: "border-cyan-400",
-    badge: "bg-gradient-to-r from-cyan-500 to-blue-500 text-white",
     label: "Elite",
-    accent: "bg-cyan-500",
+    color: "text-amber-300",
+    bg: "bg-amber-900/50",
   },
 };
 
 export default function FundCard({ fund, score, breakdown, style, className = "" }: FundCardProps) {
   const tier = tierConfig[fund.tier];
 
+  // Determine glow color based on score
+  const getGlowStyle = () => {
+    if (!score) return {};
+    if (score >= 80) return {
+      borderColor: "rgba(59,130,246,0.5)",
+      boxShadow: "12px 12px 24px rgba(0,0,0,0.5), 0 0 30px rgba(59,130,246,0.2), 0 0 60px rgba(59,130,246,0.1)"
+    };
+    if (score >= 60) return {
+      borderColor: "rgba(34,211,238,0.4)",
+      boxShadow: "12px 12px 24px rgba(0,0,0,0.5), 0 0 25px rgba(34,211,238,0.15)"
+    };
+    return {
+      borderColor: "rgba(168,85,247,0.3)",
+      boxShadow: "12px 12px 24px rgba(0,0,0,0.5), 0 0 20px rgba(168,85,247,0.1)"
+    };
+  };
+
   return (
     <div
-      style={style}
+      style={{
+        ...style,
+        background: "linear-gradient(145deg, #1a1f2a, #0f1419)",
+        ...getGlowStyle(),
+      }}
       className={`
-        relative w-[calc(100vw-2rem)] max-w-[360px] bg-gray-900 rounded-2xl border-2 ${tier.border}
-        shadow-2xl overflow-hidden ${fund.tier === "elite" ? "card-elite" : ""} ${className}
+        relative w-[calc(100vw-2rem)] max-w-[360px] rounded-2xl border overflow-hidden ${className}
       `}
     >
-      {/* Top accent bar */}
-      <div className={`h-1.5 ${tier.accent}`} />
+      {/* Top accent bar - glowing */}
+      <div className="h-1.5 bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-500" style={{ boxShadow: "0 2px 10px rgba(59,130,246,0.5)" }} />
 
       {/* Header */}
       <div className="p-4 md:p-5 pb-3">
         <div className="flex justify-between items-start gap-2">
           <div className="flex-1 min-w-0">
-            <h2 className="text-lg md:text-xl font-bold text-white truncate">{fund.name}</h2>
+            <h2 className="text-lg md:text-xl font-bold text-gray-100 truncate">{fund.name}</h2>
             <p className="text-gray-400 text-xs md:text-sm">{fund.fundNumber}</p>
           </div>
           <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
-            <span className={`text-[10px] md:text-xs font-bold px-2 md:px-3 py-1 rounded-full ${tier.badge}`}>
+            <span className={`text-[10px] md:text-xs font-bold px-2 md:px-3 py-1 rounded-full ${tier.bg} ${tier.color}`}>
               {tier.label}
             </span>
             {score !== undefined && (
-              <span className="text-xs text-cyan-400 font-semibold">
+              <span className="text-sm font-bold text-blue-400" style={{ textShadow: "0 0 10px rgba(59,130,246,0.5)" }}>
                 {score}% match
               </span>
             )}
@@ -75,22 +91,22 @@ export default function FundCard({ fund, score, breakdown, style, className = ""
         {breakdown && (
           <div className="flex flex-wrap gap-1.5 mt-2">
             {breakdown.stage.matched > 0 && (
-              <span className="text-[10px] bg-emerald-900/50 text-emerald-400 px-2 py-0.5 rounded">
+              <span className="text-[10px] bg-emerald-900/50 text-emerald-300 px-2 py-0.5 rounded font-medium">
                 ✓ {breakdown.stage.matched}/{breakdown.stage.total} stages
               </span>
             )}
             {breakdown.sector.matched > 0 && (
-              <span className="text-[10px] bg-emerald-900/50 text-emerald-400 px-2 py-0.5 rounded">
+              <span className="text-[10px] bg-emerald-900/50 text-emerald-300 px-2 py-0.5 rounded font-medium">
                 ✓ {breakdown.sector.matched} sectors
               </span>
             )}
             {breakdown.geography && (
-              <span className="text-[10px] bg-emerald-900/50 text-emerald-400 px-2 py-0.5 rounded">
+              <span className="text-[10px] bg-emerald-900/50 text-emerald-300 px-2 py-0.5 rounded font-medium">
                 ✓ geo
               </span>
             )}
             {breakdown.managerType === true && (
-              <span className="text-[10px] bg-emerald-900/50 text-emerald-400 px-2 py-0.5 rounded">
+              <span className="text-[10px] bg-emerald-900/50 text-emerald-300 px-2 py-0.5 rounded font-medium">
                 ✓ type
               </span>
             )}
@@ -102,18 +118,24 @@ export default function FundCard({ fund, score, breakdown, style, className = ""
       <div className="px-4 md:px-5 space-y-3 md:space-y-4">
         {/* GPs */}
         <div>
-          <p className="text-xs text-gray-500 uppercase tracking-wider mb-2 font-medium">
+          <p className="text-xs text-gray-500 uppercase tracking-wider mb-2 font-semibold">
             General Partners
           </p>
           <div className="space-y-1.5">
             {fund.gps.slice(0, 2).map((gp, idx) => (
               <div key={idx} className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center text-sm font-bold text-blue-400 flex-shrink-0">
+                <div
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-blue-400 flex-shrink-0"
+                  style={{
+                    background: "#0a0f14",
+                    boxShadow: "inset 2px 2px 4px rgba(0,0,0,0.5), 0 0 8px rgba(59,130,246,0.2)"
+                  }}
+                >
                   {gp.name.charAt(0)}
                 </div>
                 <div className="min-w-0">
-                  <span className="text-white font-medium text-sm block truncate">{gp.name}</span>
-                  <span className="text-gray-500 text-xs block truncate">{gp.background}</span>
+                  <span className="text-gray-200 font-medium text-sm block truncate">{gp.name}</span>
+                  <span className="text-gray-400 text-xs block truncate">{gp.background}</span>
                 </div>
               </div>
             ))}
@@ -122,7 +144,7 @@ export default function FundCard({ fund, score, breakdown, style, className = ""
 
         {/* Thesis */}
         <div>
-          <p className="text-xs text-gray-500 uppercase tracking-wider mb-1.5 font-medium">
+          <p className="text-xs text-gray-500 uppercase tracking-wider mb-1.5 font-semibold">
             Thesis
           </p>
           <p className="text-gray-300 text-sm leading-relaxed line-clamp-2">{fund.thesis}</p>
@@ -130,14 +152,17 @@ export default function FundCard({ fund, score, breakdown, style, className = ""
 
         {/* Portfolio */}
         <div>
-          <p className="text-xs text-gray-500 uppercase tracking-wider mb-2 font-medium">
+          <p className="text-xs text-gray-500 uppercase tracking-wider mb-2 font-semibold">
             Portfolio
           </p>
           <div className="flex flex-wrap gap-1.5">
             {fund.notablePortfolio.map((company) => (
               <span
                 key={company}
-                className="text-xs bg-gray-800 text-gray-300 px-2.5 py-1 rounded-md border border-gray-700"
+                className="text-xs text-gray-300 px-2.5 py-1 rounded-md border border-gray-700/50"
+                style={{
+                  background: "#0a0f14",
+                }}
               >
                 {company}
               </span>
@@ -147,27 +172,43 @@ export default function FundCard({ fund, score, breakdown, style, className = ""
       </div>
 
       {/* Bottom stats */}
-      <div className="mt-4 p-4 bg-gray-950/50 border-t border-gray-800">
+      <div
+        className="mt-4 p-4"
+        style={{
+          background: "#0a0f14",
+          borderTop: "1px solid rgba(42,52,65,0.5)"
+        }}
+      >
         <div className="grid grid-cols-2 gap-3 mb-3">
-          <div className="bg-gray-800/50 rounded-lg p-2.5">
+          <div
+            className="rounded-lg p-2.5 border border-gray-800/50"
+            style={{
+              background: "linear-gradient(145deg, #1a1f2a, #0f1419)",
+            }}
+          >
             <p className="text-gray-500 text-xs">Fund Size</p>
-            <p className="text-white font-semibold text-sm">{fund.fundSize}</p>
+            <p className="text-gray-100 font-semibold text-sm">{fund.fundSize}</p>
           </div>
-          <div className="bg-gray-800/50 rounded-lg p-2.5">
+          <div
+            className="rounded-lg p-2.5 border border-gray-800/50"
+            style={{
+              background: "linear-gradient(145deg, #1a1f2a, #0f1419)",
+            }}
+          >
             <p className="text-gray-500 text-xs">Check Size</p>
-            <p className="text-white font-semibold text-sm">{fund.checkSize}</p>
+            <p className="text-gray-100 font-semibold text-sm">{fund.checkSize}</p>
           </div>
         </div>
 
         {/* Tags */}
         <div className="flex flex-wrap gap-1.5">
-          <span className="text-[10px] bg-blue-900/50 text-blue-300 px-2 py-0.5 rounded border border-blue-800">
+          <span className="text-[10px] bg-blue-900/50 text-blue-300 px-2 py-0.5 rounded font-medium">
             {fund.geography}
           </span>
           {fund.stage.map((s) => (
             <span
               key={s}
-              className="text-[10px] bg-cyan-900/50 text-cyan-300 px-2 py-0.5 rounded border border-cyan-800"
+              className="text-[10px] bg-blue-900/50 text-blue-300 px-2 py-0.5 rounded font-medium"
             >
               {s}
             </span>
@@ -175,7 +216,7 @@ export default function FundCard({ fund, score, breakdown, style, className = ""
           {fund.sectors.slice(0, 2).map((s) => (
             <span
               key={s}
-              className="text-[10px] bg-gray-800 text-gray-400 px-2 py-0.5 rounded border border-gray-700"
+              className="text-[10px] bg-gray-700 text-gray-300 px-2 py-0.5 rounded font-medium"
             >
               {s}
             </span>

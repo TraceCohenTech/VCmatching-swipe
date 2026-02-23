@@ -17,7 +17,6 @@ function shuffleArray<T>(array: T[], seed: number): T[] {
   let currentIndex = shuffled.length;
   let seededRandom = seed;
 
-  // Simple seeded random function
   const random = () => {
     seededRandom = (seededRandom * 9301 + 49297) % 233280;
     return seededRandom / 233280;
@@ -75,14 +74,12 @@ function calculateScore(fund: Fund, lpProfile: NonNullable<ReturnType<typeof use
   let score = 0;
   let maxScore = 0;
 
-  // Stage scoring
   maxScore += 40;
   const stageMatches = fund.stage.filter((s) => lpProfile.stages.includes(s)).length;
   if (stageMatches > 0) {
     score += Math.min(40, stageMatches * 20);
   }
 
-  // Sector scoring
   maxScore += 40;
   const sectorMatches = fund.sectors.filter((s) => lpProfile.sectors.includes(s)).length;
   if (lpProfile.sectors.length > 0 && fund.sectors.length > 0) {
@@ -90,14 +87,12 @@ function calculateScore(fund: Fund, lpProfile: NonNullable<ReturnType<typeof use
     score += Math.round(sectorOverlapRatio * 40);
   }
 
-  // Geography scoring
   maxScore += 20;
   const geoMatch = geographyMatches(fund.geography, lpProfile.geography);
   if (geoMatch) {
     score += 20;
   }
 
-  // Manager type scoring
   let managerTypeMatch: boolean | null = null;
   if (lpProfile.preferEmerging || lpProfile.preferEstablished) {
     maxScore += 20;
@@ -117,7 +112,6 @@ function calculateScore(fund: Fund, lpProfile: NonNullable<ReturnType<typeof use
     }
   }
 
-  // Personality-based bonus (if quiz was taken)
   if (lpProfile.personality) {
     maxScore += 15;
     const isEarlyStage = fund.stage.some(s => s === "Pre-seed" || s === "Seed");
@@ -125,15 +119,12 @@ function calculateScore(fund: Fund, lpProfile: NonNullable<ReturnType<typeof use
     const isElite = fund.tier === "elite" || fund.tier === "top-tier";
 
     if (lpProfile.personality === "hunter") {
-      // Hunters love emerging managers and early stage
       if (isEmerging) score += 10;
       if (isEarlyStage) score += 5;
     } else if (lpProfile.personality === "architect") {
-      // Architects prefer balanced, established but not necessarily elite
       if (fund.tier === "established" || fund.tier === "top-tier") score += 10;
       if (fund.stage.includes("Series A")) score += 5;
     } else if (lpProfile.personality === "guardian") {
-      // Guardians want elite, proven track records
       if (isElite) score += 15;
     }
   }
@@ -149,7 +140,6 @@ function calculateScore(fund: Fund, lpProfile: NonNullable<ReturnType<typeof use
   };
 }
 
-// Haptic feedback helper
 function triggerHaptic(type: "light" | "medium" | "heavy" = "medium") {
   if (typeof navigator !== "undefined" && "vibrate" in navigator) {
     const durations = { light: 10, medium: 25, heavy: 50 };
@@ -165,6 +155,7 @@ export default function SwipeInterface() {
   const [lastSwipe, setLastSwipe] = useState<{ fundId: string; action: "like" | "pass" } | null>(null);
   const [showMatchCount, setShowMatchCount] = useState(true);
   const [selectedFundDetail, setSelectedFundDetail] = useState<{ fund: Fund; score: number; breakdown: ScoreBreakdown } | null>(null);
+  const [showPassedFunds, setShowPassedFunds] = useState(false);
 
   const cardRef = useRef<HTMLDivElement>(null);
   const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
@@ -172,7 +163,6 @@ export default function SwipeInterface() {
   const [isDragging, setIsDragging] = useState(false);
 
   const rankedFunds = useMemo(() => {
-    // Use profile creation time as seed for consistent randomization per session
     const seed = lpProfile ? new Date(lpProfile.createdAt).getTime() : Date.now();
 
     if (!lpProfile) {
@@ -195,17 +185,15 @@ export default function SwipeInterface() {
       return { fund, score, breakdown };
     });
 
-    // Group by score buckets (10-point ranges), shuffle within each bucket, then flatten
     const passing = scored.filter(({ score }) => score >= MIN_SCORE);
     const buckets: Map<number, typeof passing> = new Map();
 
     passing.forEach((item) => {
-      const bucket = Math.floor(item.score / 10) * 10; // 90-99, 80-89, etc.
+      const bucket = Math.floor(item.score / 10) * 10;
       if (!buckets.has(bucket)) buckets.set(bucket, []);
       buckets.get(bucket)!.push(item);
     });
 
-    // Sort buckets by score (descending), shuffle within each bucket
     const sortedBuckets = Array.from(buckets.entries()).sort((a, b) => b[0] - a[0]);
     const result: typeof passing = [];
 
@@ -227,7 +215,6 @@ export default function SwipeInterface() {
   const handleSwipe = useCallback((direction: "left" | "right" | "super") => {
     if (isAnimating || !currentItem) return;
 
-    // Haptic feedback
     triggerHaptic(direction === "right" || direction === "super" ? "medium" : "light");
 
     setIsAnimating(true);
@@ -312,14 +299,12 @@ export default function SwipeInterface() {
   const rotation = touchDelta.x * 0.05;
   const opacity = Math.max(0.5, 1 - Math.abs(touchDelta.x) / 500);
 
-  // Stats
   const totalReviewed = rankedFunds.length - availableFunds.length;
   const rightSwipes = deck.length;
   const leftSwipes = totalReviewed - rightSwipes;
   const selectivityPct = totalReviewed > 0 ? Math.round((leftSwipes / totalReviewed) * 100) : 0;
   const avgScore = deck.length > 0 ? Math.round(deck.reduce((sum, d) => sum + d.score, 0) / deck.length) : 0;
 
-  // Show quiz
   if (showQuiz) {
     return (
       <PersonalityQuiz
@@ -328,40 +313,38 @@ export default function SwipeInterface() {
           setShowQuiz(false);
           setCurrentStep("deck");
         }}
+        onCancel={() => setShowQuiz(false)}
       />
     );
   }
 
-  // No matches state - criteria too narrow
+  // No matches state
   if (rankedFunds.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center p-4 relative overflow-hidden">
-        <div className="fixed inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-1/2 -left-1/2 w-full h-full bg-gradient-to-br from-orange-600/20 via-transparent to-transparent rounded-full blur-3xl" />
-          <div className="absolute -bottom-1/2 -right-1/2 w-full h-full bg-gradient-to-tl from-red-600/20 via-transparent to-transparent rounded-full blur-3xl" />
-        </div>
+      <div className="min-h-screen bg-[#0f1419] flex items-center justify-center p-4">
+        <div className="device-panel p-8 max-w-md w-full text-center">
+          <div className="screw tl" />
+          <div className="screw tr" />
+          <div className="screw bl" />
+          <div className="screw br" />
 
-        <div className="max-w-md w-full relative z-10 text-center">
-          <div className="text-6xl mb-4">🔍</div>
-          <h2 className="text-2xl font-black text-white mb-2">No Matching Funds</h2>
-          <p className="text-gray-400 mb-6">
-            Your criteria are too narrow. Try broadening your search:
-          </p>
+          <div className="crt-screen p-6 mb-6">
+            <div className="text-4xl mb-2 relative z-10">🔍</div>
+            <h2 className="text-xl font-bold uppercase tracking-wider mb-2 relative z-10">No Matches Found</h2>
+            <p className="text-sm opacity-80 relative z-10">CRITERIA TOO NARROW</p>
+          </div>
 
-          <div className="bg-gray-900/80 rounded-xl p-4 mb-6 text-left border border-gray-700/50">
-            <p className="text-sm text-gray-300 mb-3">Suggestions:</p>
+          <div className="neu-card-inset p-4 mb-6 text-left">
+            <p className="text-sm text-gray-300 mb-3 font-semibold">Suggestions:</p>
             <ul className="text-sm text-gray-400 space-y-2">
-              <li>• Add more stages (Pre-seed, Seed, Series A)</li>
-              <li>• Expand your sector focus</li>
-              <li>• Widen the fund size range</li>
-              <li>• Include more geographies or select &quot;Global&quot;</li>
+              <li>• Add more stages</li>
+              <li>• Expand sector focus</li>
+              <li>• Widen fund size range</li>
+              <li>• Include more geographies</li>
             </ul>
           </div>
 
-          <button
-            onClick={() => setCurrentStep("form")}
-            className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-bold py-4 px-6 rounded-xl text-lg hover:from-blue-500 hover:to-cyan-500 transition-all"
-          >
+          <button onClick={() => setCurrentStep("form")} className="neu-btn neu-btn-primary w-full">
             Edit Criteria
           </button>
         </div>
@@ -369,59 +352,45 @@ export default function SwipeInterface() {
     );
   }
 
-  // Few matches warning (less than 10)
-  const fewMatches = rankedFunds.length < 10 && rankedFunds.length > 0;
-
-  // Match count intro screen
+  // Match count intro
   if (showMatchCount && rankedFunds.length > 0 && totalReviewed === 0) {
     return (
-      <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center p-4 relative overflow-hidden">
-        <div className="fixed inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-1/2 -left-1/2 w-full h-full bg-gradient-to-br from-blue-600/20 via-transparent to-transparent rounded-full blur-3xl" />
-          <div className="absolute -bottom-1/2 -right-1/2 w-full h-full bg-gradient-to-tl from-cyan-600/20 via-transparent to-transparent rounded-full blur-3xl" />
-        </div>
+      <div className="min-h-screen bg-[#0f1419] flex items-center justify-center p-4">
+        <div className="device-panel p-8 max-w-md w-full text-center">
+          <div className="screw tl" />
+          <div className="screw tr" />
+          <div className="screw bl" />
+          <div className="screw br" />
 
-        <div className="max-w-md w-full relative z-10 text-center">
-          <div className="text-6xl mb-4">🎯</div>
-          <h2 className="text-2xl font-black text-white mb-2">Ready to Match!</h2>
-          <p className="text-gray-400 mb-6">
-            We found <span className="text-cyan-400 font-bold">{rankedFunds.length} funds</span> that match your criteria
-          </p>
+          <div className="led active animate-led-pulse absolute top-6 right-6" />
 
-          <div className="bg-gray-900/80 rounded-xl p-4 mb-6 border border-gray-700/50">
-            <div className="grid grid-cols-3 gap-4 text-center">
-              <div>
-                <div className="text-2xl font-bold text-cyan-400">
-                  {rankedFunds.filter(f => f.score >= 80).length}
-                </div>
-                <div className="text-xs text-gray-500">80%+ Match</div>
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-blue-400">
-                  {rankedFunds.filter(f => f.score >= 60 && f.score < 80).length}
-                </div>
-                <div className="text-xs text-gray-500">60-79% Match</div>
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-emerald-400">
-                  {Math.round(rankedFunds.reduce((s, f) => s + f.score, 0) / rankedFunds.length)}%
-                </div>
-                <div className="text-xs text-gray-500">Avg Score</div>
-              </div>
+          <div className="crt-screen p-6 mb-6">
+            <div className="text-4xl mb-2 relative z-10">🎯</div>
+            <h2 className="text-xl font-bold uppercase tracking-wider mb-2 animate-text-pulse relative z-10">
+              {rankedFunds.length} Matches Found
+            </h2>
+            <p className="text-sm opacity-80 relative z-10">READY TO BEGIN MATCHING</p>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3 mb-6">
+            <div className="neu-card-inset p-3 text-center">
+              <div className="text-xl font-bold text-blue-400">{rankedFunds.filter(f => f.score >= 80).length}</div>
+              <div className="text-xs text-gray-400">80%+ Match</div>
+            </div>
+            <div className="neu-card-inset p-3 text-center">
+              <div className="text-xl font-bold text-blue-400">{rankedFunds.filter(f => f.score >= 60 && f.score < 80).length}</div>
+              <div className="text-xs text-gray-400">60-79%</div>
+            </div>
+            <div className="neu-card-inset p-3 text-center">
+              <div className="text-xl font-bold text-emerald-400">{Math.round(rankedFunds.reduce((s, f) => s + f.score, 0) / rankedFunds.length)}%</div>
+              <div className="text-xs text-gray-400">Avg Score</div>
             </div>
           </div>
 
-          <button
-            onClick={() => setShowMatchCount(false)}
-            className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-bold py-4 px-6 rounded-xl text-lg hover:from-blue-500 hover:to-cyan-500 transition-all"
-          >
+          <button onClick={() => setShowMatchCount(false)} className="neu-btn neu-btn-primary w-full mb-3">
             Start Swiping
           </button>
-
-          <button
-            onClick={() => setCurrentStep("form")}
-            className="w-full mt-3 text-gray-400 hover:text-white text-sm py-2"
-          >
+          <button onClick={() => setCurrentStep("form")} className="text-gray-400 hover:text-gray-200 text-sm">
             ← Edit Criteria
           </button>
         </div>
@@ -432,61 +401,52 @@ export default function SwipeInterface() {
   // Completion screen
   if (!currentItem) {
     return (
-      <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center p-4 relative overflow-hidden">
-        {/* Background */}
-        <div className="fixed inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-1/2 -left-1/2 w-full h-full bg-gradient-to-br from-emerald-600/20 via-transparent to-transparent rounded-full blur-3xl" />
-          <div className="absolute -bottom-1/2 -right-1/2 w-full h-full bg-gradient-to-tl from-cyan-600/20 via-transparent to-transparent rounded-full blur-3xl" />
-        </div>
+      <div className="min-h-screen bg-[#0f1419] flex items-center justify-center p-4">
+        <div className="device-panel p-8 max-w-md w-full">
+          <div className="screw tl" />
+          <div className="screw tr" />
+          <div className="screw bl" />
+          <div className="screw br" />
 
-        <div className="max-w-md w-full relative z-10">
-          {/* Header */}
-          <div className="text-center mb-6">
-            <div className="text-5xl mb-4">✅</div>
-            <h2 className="text-2xl font-black text-white mb-2">Swiping Complete!</h2>
-            <p className="text-gray-400 text-sm">You reviewed all {rankedFunds.length} matching funds</p>
+          <div className="crt-screen p-6 mb-6 text-center">
+            <div className="text-4xl mb-2 relative z-10">✅</div>
+            <h2 className="text-xl font-bold uppercase tracking-wider mb-2 animate-text-pulse relative z-10">
+              Swiping Complete
+            </h2>
+            <p className="text-sm opacity-80 relative z-10">REVIEWED {rankedFunds.length} FUNDS</p>
           </div>
 
-          {/* Stats Grid */}
           <div className="grid grid-cols-2 gap-3 mb-6">
-            <div className="bg-gray-900/80 rounded-xl p-4 text-center border border-gray-700/50">
-              <div className="text-2xl font-black text-cyan-400">{deck.length}</div>
-              <div className="text-xs text-gray-400">Saved to Deck</div>
+            <div className="neu-card-inset p-4 text-center">
+              <div className="text-2xl font-bold text-blue-400">{deck.length}</div>
+              <div className="text-xs text-gray-400">Saved</div>
             </div>
-            <div className="bg-gray-900/80 rounded-xl p-4 text-center border border-gray-700/50">
-              <div className="text-2xl font-black text-white">{leftSwipes}</div>
+            <div className="neu-card-inset p-4 text-center">
+              <div className="text-2xl font-bold text-gray-300">{leftSwipes}</div>
               <div className="text-xs text-gray-400">Passed</div>
             </div>
-            <div className="bg-gray-900/80 rounded-xl p-4 text-center border border-gray-700/50">
-              <div className="text-2xl font-black text-purple-400">{selectivityPct}%</div>
+            <div className="neu-card-inset p-4 text-center">
+              <div className="text-2xl font-bold text-purple-400">{selectivityPct}%</div>
               <div className="text-xs text-gray-400">Selectivity</div>
             </div>
-            <div className="bg-gray-900/80 rounded-xl p-4 text-center border border-gray-700/50">
-              <div className="text-2xl font-black text-emerald-400">{avgScore}%</div>
+            <div className="neu-card-inset p-4 text-center">
+              <div className="text-2xl font-bold text-emerald-400">{avgScore}%</div>
               <div className="text-xs text-gray-400">Avg Match</div>
             </div>
           </div>
 
-          {/* Action buttons */}
           <div className="space-y-3">
-            <button
-              onClick={() => setCurrentStep("deck")}
-              className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold py-4 px-6 rounded-xl text-lg hover:from-emerald-400 hover:to-teal-400 transition-all"
-            >
+            <button onClick={() => setCurrentStep("deck")} className="neu-btn neu-btn-primary w-full">
               View My Deck ({deck.length})
             </button>
-
             <button
               onClick={() => setShowQuiz(true)}
-              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold py-3 px-6 rounded-xl hover:from-purple-500 hover:to-pink-500 transition-all flex items-center justify-center gap-2"
+              className="neu-btn w-full"
+              style={{ background: "linear-gradient(145deg, #c084fc, #9333ea)", color: "white" }}
             >
-              <span>🎮</span> Take LP Personality Quiz
+              🎮 Take Personality Quiz
             </button>
-
-            <button
-              onClick={() => setCurrentStep("form")}
-              className="w-full bg-gray-800 text-gray-300 font-medium py-3 px-6 rounded-xl hover:bg-gray-700 transition-all"
-            >
+            <button onClick={() => setCurrentStep("form")} className="neu-btn w-full">
               Edit Criteria
             </button>
           </div>
@@ -495,75 +455,111 @@ export default function SwipeInterface() {
     );
   }
 
+  // Main swipe interface
   return (
     <div
-      className="min-h-screen bg-gray-950 flex flex-col items-center p-4 md:p-6 select-none relative overflow-hidden"
+      className="min-h-screen bg-[#0f1419] flex flex-col items-center p-4 md:p-6 select-none"
       onKeyDown={handleKeyDown}
       tabIndex={0}
       onMouseLeave={handleMouseUp}
     >
-      {/* Background */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-1/2 -left-1/2 w-full h-full bg-gradient-to-br from-blue-600/10 via-transparent to-transparent rounded-full blur-3xl" />
-        <div className="absolute -bottom-1/2 -right-1/2 w-full h-full bg-gradient-to-tl from-purple-600/10 via-transparent to-transparent rounded-full blur-3xl" />
-      </div>
-
       {/* Header */}
-      <div className="w-full max-w-md flex justify-between items-center mb-4 relative z-10">
+      <div
+        className="w-full max-w-md flex justify-between items-center mb-4 p-3 rounded-xl border border-gray-800/50"
+        style={{
+          background: "linear-gradient(145deg, #1a1f2a, #0f1419)",
+          boxShadow: "8px 8px 16px rgba(0,0,0,0.4)"
+        }}
+      >
         <button
           onClick={() => setCurrentStep("form")}
-          className="text-gray-400 hover:text-white transition-colors font-medium text-sm flex items-center gap-1"
+          className="text-gray-400 hover:text-blue-400 transition-colors font-medium text-sm flex items-center gap-1"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
           Edit
         </button>
-        <h1 className="text-xl font-black text-white">
-          LP <span className="text-cyan-400">Match</span>
+        <h1 className="text-lg font-black text-white">
+          LP <span className="text-blue-400" style={{ textShadow: "0 0 10px rgba(59,130,246,0.5)" }}>Match</span>
         </h1>
         <button
           onClick={() => setCurrentStep("deck")}
-          className="bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-4 py-2 rounded-lg font-bold text-sm hover:from-blue-500 hover:to-cyan-500 transition-all"
+          className="neu-btn neu-btn-primary neu-btn-small"
         >
           Deck: {deck.length}
         </button>
       </div>
 
       {/* Progress */}
-      <div className="w-full max-w-md mb-4 relative z-10">
+      <div className="w-full max-w-md mb-4">
         <div className="flex justify-between text-xs text-gray-400 mb-2">
           <span>{totalReviewed} / {rankedFunds.length} reviewed</span>
-          <span className="text-cyan-400">{availableFunds.length} remaining</span>
+          <span className="text-blue-400">{availableFunds.length} remaining</span>
         </div>
-        <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
+        <div className="neu-progress h-3">
           <div
-            className="h-full bg-gradient-to-r from-blue-500 via-cyan-500 to-teal-500 transition-all duration-300"
+            className="neu-progress-bar"
             style={{ width: `${(totalReviewed / rankedFunds.length) * 100}%` }}
           />
         </div>
       </div>
 
-      {/* Few matches warning */}
-      {fewMatches && totalReviewed === 0 && (
-        <div className="w-full max-w-md mb-3 bg-yellow-900/30 border border-yellow-700/50 rounded-lg px-3 py-2 relative z-10">
-          <p className="text-yellow-400 text-xs">
-            ⚠️ Only {rankedFunds.length} funds match your criteria. Consider{" "}
-            <button onClick={() => setCurrentStep("form")} className="underline hover:text-yellow-300">
-              broadening your search
-            </button>.
-          </p>
-        </div>
-      )}
-
       {/* Done Early Button */}
       {deck.length > 0 && (
         <button
           onClick={() => setCurrentStep("deck")}
-          className="mb-4 text-sm text-cyan-400 hover:text-cyan-300 transition-colors relative z-10"
+          className="mb-2 text-sm text-blue-400 hover:text-blue-300 transition-colors font-medium"
         >
           Done? View your {deck.length} saved funds →
         </button>
+      )}
+
+      {/* Passed Funds Recovery */}
+      {passed.length > 0 && (
+        <div className="mb-4 w-full max-w-md">
+          <button
+            onClick={() => setShowPassedFunds(!showPassedFunds)}
+            className="text-xs text-gray-500 hover:text-gray-300 transition-colors flex items-center gap-1"
+          >
+            <svg
+              className={`w-3 h-3 transition-transform ${showPassedFunds ? "rotate-90" : ""}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+            {passed.length} passed funds
+          </button>
+
+          {showPassedFunds && (
+            <div className="mt-2 p-3 rounded-xl bg-gray-900/50 border border-gray-800 max-h-32 overflow-y-auto">
+              <div className="space-y-1">
+                {passed.slice().reverse().slice(0, 10).map(fundId => {
+                  const fundData = rankedFunds.find(r => r.fund.id === fundId);
+                  if (!fundData) return null;
+                  return (
+                    <div key={fundId} className="flex items-center justify-between text-xs">
+                      <span className="text-gray-400 truncate flex-1">{fundData.fund.name}</span>
+                      <button
+                        onClick={() => {
+                          removeFromPassed(fundId);
+                        }}
+                        className="text-blue-400 hover:text-blue-300 ml-2 font-medium"
+                      >
+                        Restore
+                      </button>
+                    </div>
+                  );
+                })}
+                {passed.length > 10 && (
+                  <p className="text-gray-500 text-xs">+{passed.length - 10} more</p>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
       )}
 
       {/* Card Stack */}
@@ -606,7 +602,6 @@ export default function SwipeInterface() {
           onTouchEnd={handleTouchEnd}
           onMouseDown={handleMouseDown}
           onClick={() => {
-            // Only open detail if user didn't drag
             if (Math.abs(touchDelta.x) < 10 && Math.abs(touchDelta.y) < 10 && !isDragging) {
               setSelectedFundDetail(currentItem);
             }
@@ -615,7 +610,10 @@ export default function SwipeInterface() {
           <FundCard fund={currentItem.fund} score={currentItem.score} breakdown={currentItem.breakdown} />
 
           {/* Tap hint */}
-          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 text-gray-500 text-xs flex items-center gap-1 bg-gray-900/80 px-2 py-1 rounded-full">
+          <div
+            className="absolute bottom-3 left-1/2 -translate-x-1/2 text-blue-300 text-xs flex items-center gap-1 px-3 py-1.5 rounded-full border border-blue-500/30"
+            style={{ background: "rgba(15, 20, 25, 0.95)", boxShadow: "0 0 10px rgba(59,130,246,0.2)" }}
+          >
             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
@@ -625,16 +623,24 @@ export default function SwipeInterface() {
 
           {touchDelta.x < -50 && (
             <div
-              className="absolute top-8 right-4 text-red-500 text-2xl font-black -rotate-12 border-4 border-red-500 px-4 py-1 rounded-xl bg-red-500/20"
-              style={{ opacity: Math.min(1, Math.abs(touchDelta.x) / 100) }}
+              className="absolute top-8 right-4 text-red-400 text-2xl font-black -rotate-12 border-4 border-red-400 px-4 py-1 rounded-xl"
+              style={{
+                opacity: Math.min(1, Math.abs(touchDelta.x) / 100),
+                background: "rgba(127,29,29,0.8)",
+                boxShadow: "0 0 20px rgba(239,68,68,0.5)"
+              }}
             >
               PASS
             </div>
           )}
           {touchDelta.x > 50 && (
             <div
-              className="absolute top-8 left-4 text-cyan-400 text-2xl font-black rotate-12 border-4 border-cyan-400 px-4 py-1 rounded-xl bg-cyan-500/20"
-              style={{ opacity: Math.min(1, Math.abs(touchDelta.x) / 100) }}
+              className="absolute top-8 left-4 text-blue-300 text-2xl font-black rotate-12 border-4 border-blue-400 px-4 py-1 rounded-xl"
+              style={{
+                opacity: Math.min(1, Math.abs(touchDelta.x) / 100),
+                background: "rgba(13,78,68,0.8)",
+                boxShadow: "0 0 20px rgba(59,130,246,0.5)"
+              }}
             >
               SAVE
             </div>
@@ -643,12 +649,17 @@ export default function SwipeInterface() {
       </div>
 
       {/* Action Buttons */}
-      <div className="flex items-center gap-3 md:gap-5 mt-6 mb-4 relative z-10">
+      <div className="flex items-center gap-3 md:gap-5 mt-6 mb-4">
         {/* Undo button */}
         <button
           onClick={handleUndo}
           disabled={!lastSwipe || isAnimating}
-          className="w-10 h-10 rounded-full bg-gray-800 border-2 border-yellow-500/50 text-yellow-400 flex items-center justify-center hover:bg-yellow-500/20 hover:border-yellow-400 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+          className="w-10 h-10 rounded-full flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed transition-all hover:scale-105"
+          style={{
+            background: "linear-gradient(145deg, #f59e0b, #d97706)",
+            boxShadow: "0 0 15px rgba(245,158,11,0.3)",
+            color: "white"
+          }}
           title="Undo last swipe"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -659,7 +670,12 @@ export default function SwipeInterface() {
         <button
           onClick={() => handleSwipe("left")}
           disabled={isAnimating}
-          className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-gray-800 border-2 border-red-500/50 text-red-400 flex items-center justify-center hover:bg-red-500/20 hover:border-red-400 transition-all disabled:opacity-50"
+          className="w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center disabled:opacity-50 transition-all active:scale-95 hover:scale-105"
+          style={{
+            background: "linear-gradient(145deg, #ef4444, #dc2626)",
+            boxShadow: "0 0 20px rgba(239,68,68,0.4)",
+            color: "white"
+          }}
         >
           <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
@@ -669,7 +685,12 @@ export default function SwipeInterface() {
         <button
           onClick={() => handleSwipe("right")}
           disabled={isAnimating}
-          className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-gradient-to-br from-blue-600 to-cyan-600 text-white flex items-center justify-center hover:scale-105 transition-all shadow-lg disabled:opacity-50"
+          className="w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center disabled:opacity-50 transition-all active:scale-95 hover:scale-105"
+          style={{
+            background: "linear-gradient(145deg, #3b82f6, #2563eb)",
+            boxShadow: "0 0 25px rgba(59,130,246,0.5)",
+            color: "white"
+          }}
         >
           <svg className="w-7 h-7 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
@@ -677,7 +698,7 @@ export default function SwipeInterface() {
         </button>
       </div>
 
-      <p className="text-gray-500 text-xs relative z-10">
+      <p className="text-gray-400 text-xs">
         Swipe or drag • Tap card for details • Arrow keys work too
       </p>
 
