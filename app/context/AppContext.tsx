@@ -3,6 +3,8 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { Fund } from "../data/funds";
 
+export type PersonalityType = "hunter" | "architect" | "guardian" | null;
+
 export interface LPProfile {
   id: string;
   type: string;
@@ -14,6 +16,7 @@ export interface LPProfile {
   preferEmerging: boolean;
   preferEstablished: boolean;
   createdAt: string;
+  personality?: PersonalityType;
 }
 
 export interface SwipeEvent {
@@ -40,14 +43,27 @@ interface Analytics {
 
 export type LPProfileInput = Omit<LPProfile, "id" | "createdAt">;
 
+export interface DeckItem {
+  id: string;
+  name: string;
+  score: number;
+  fundSize: string;
+  geography: string;
+  tier: string;
+  sectors: string[];
+  stage: string[];
+}
+
 interface AppContextType {
   lpProfile: LPProfile | null;
   setLPProfile: (profile: LPProfileInput) => void;
-  deck: Fund[];
+  setPersonality: (personality: PersonalityType) => void;
+  deck: DeckItem[];
   addToDeck: (fund: Fund, score: number) => void;
   removeFromDeck: (fundId: string) => void;
   passed: string[];
   addToPassed: (fundId: string, fundName: string, score: number) => void;
+  removeFromPassed: (fundId: string) => void;
   currentStep: "form" | "swipe" | "deck";
   setCurrentStep: (step: "form" | "swipe" | "deck") => void;
   resetSession: () => void;
@@ -102,7 +118,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [lpProfile, setLPProfileState] = useState<LPProfile | null>(null);
-  const [deck, setDeck] = useState<Fund[]>([]);
+  const [deck, setDeck] = useState<DeckItem[]>([]);
   const [passed, setPassed] = useState<string[]>([]);
   const [currentStep, setCurrentStep] = useState<"form" | "swipe" | "deck">("form");
   const [analytics, setAnalytics] = useState<Analytics>(loadAnalytics);
@@ -133,10 +149,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
     sendToServer("session", { lpId: fullProfile.id, lpType: profile.type });
   };
 
+  const setPersonality = (personality: PersonalityType) => {
+    if (lpProfile) {
+      setLPProfileState({ ...lpProfile, personality });
+    }
+  };
+
   const addToDeck = (fund: Fund, score: number) => {
+    const deckItem: DeckItem = {
+      id: fund.id,
+      name: fund.name,
+      score,
+      fundSize: fund.fundSize,
+      geography: fund.geography,
+      tier: fund.tier,
+      sectors: fund.sectors,
+      stage: fund.stage,
+    };
     setDeck((prev) => {
       if (prev.find((f) => f.id === fund.id)) return prev;
-      return [...prev, fund];
+      return [...prev, deckItem];
     });
 
     if (lpProfile) {
@@ -181,6 +213,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const removeFromDeck = (fundId: string) => {
     setDeck((prev) => prev.filter((f) => f.id !== fundId));
+  };
+
+  const removeFromPassed = (fundId: string) => {
+    setPassed((prev) => prev.filter((id) => id !== fundId));
   };
 
   const addToPassed = (fundId: string, fundName: string, score: number) => {
@@ -241,11 +277,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       value={{
         lpProfile,
         setLPProfile,
+        setPersonality,
         deck,
         addToDeck,
         removeFromDeck,
         passed,
         addToPassed,
+        removeFromPassed,
         currentStep,
         setCurrentStep,
         resetSession,

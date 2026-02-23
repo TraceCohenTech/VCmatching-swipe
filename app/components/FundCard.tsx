@@ -1,10 +1,12 @@
 "use client";
 
 import { Fund } from "../data/funds";
+import { ScoreBreakdown } from "./SwipeInterface";
 
 interface FundCardProps {
   fund: Fund;
   score?: number;
+  breakdown?: ScoreBreakdown;
   style?: React.CSSProperties;
   className?: string;
 }
@@ -36,14 +38,14 @@ const tierConfig = {
   },
 };
 
-export default function FundCard({ fund, score, style, className = "" }: FundCardProps) {
+export default function FundCard({ fund, score, breakdown, style, className = "" }: FundCardProps) {
   const tier = tierConfig[fund.tier];
 
   return (
     <div
       style={style}
       className={`
-        relative w-[320px] md:w-[360px] bg-gray-900 rounded-2xl border-2 ${tier.border}
+        relative w-[calc(100vw-2rem)] max-w-[360px] bg-gray-900 rounded-2xl border-2 ${tier.border}
         shadow-2xl overflow-hidden ${fund.tier === "elite" ? "card-elite" : ""} ${className}
       `}
     >
@@ -51,27 +53,53 @@ export default function FundCard({ fund, score, style, className = "" }: FundCar
       <div className={`h-1.5 ${tier.accent}`} />
 
       {/* Header */}
-      <div className="p-5 pb-3">
-        <div className="flex justify-between items-start gap-3">
+      <div className="p-4 md:p-5 pb-3">
+        <div className="flex justify-between items-start gap-2">
           <div className="flex-1 min-w-0">
-            <h2 className="text-xl font-bold text-white truncate">{fund.name}</h2>
-            <p className="text-gray-400 text-sm">{fund.fundNumber}</p>
+            <h2 className="text-lg md:text-xl font-bold text-white truncate">{fund.name}</h2>
+            <p className="text-gray-400 text-xs md:text-sm">{fund.fundNumber}</p>
           </div>
-          <div className="flex flex-col items-end gap-2 flex-shrink-0">
-            <span className={`text-xs font-bold px-3 py-1 rounded-full ${tier.badge}`}>
+          <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+            <span className={`text-[10px] md:text-xs font-bold px-2 md:px-3 py-1 rounded-full ${tier.badge}`}>
               {tier.label}
             </span>
             {score !== undefined && (
-              <span className="text-xs text-gray-400">
+              <span className="text-xs text-cyan-400 font-semibold">
                 {score}% match
               </span>
             )}
           </div>
         </div>
+
+        {/* Score breakdown */}
+        {breakdown && (
+          <div className="flex flex-wrap gap-1.5 mt-2">
+            {breakdown.stage.matched > 0 && (
+              <span className="text-[10px] bg-emerald-900/50 text-emerald-400 px-2 py-0.5 rounded">
+                ✓ {breakdown.stage.matched}/{breakdown.stage.total} stages
+              </span>
+            )}
+            {breakdown.sector.matched > 0 && (
+              <span className="text-[10px] bg-emerald-900/50 text-emerald-400 px-2 py-0.5 rounded">
+                ✓ {breakdown.sector.matched} sectors
+              </span>
+            )}
+            {breakdown.geography && (
+              <span className="text-[10px] bg-emerald-900/50 text-emerald-400 px-2 py-0.5 rounded">
+                ✓ geo
+              </span>
+            )}
+            {breakdown.managerType === true && (
+              <span className="text-[10px] bg-emerald-900/50 text-emerald-400 px-2 py-0.5 rounded">
+                ✓ type
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Main content */}
-      <div className="px-5 space-y-4">
+      <div className="px-4 md:px-5 space-y-3 md:space-y-4">
         {/* GPs */}
         <div>
           <p className="text-xs text-gray-500 uppercase tracking-wider mb-2 font-medium">
