@@ -34,6 +34,8 @@ export default function LPForm() {
     preferEmerging: false,
     preferEstablished: false,
   });
+  // Require explicit interaction with fund size before allowing submission
+  const [fundSizeTouched, setFundSizeTouched] = useState(false);
 
   // Update screen text based on selections
   useEffect(() => {
@@ -62,8 +64,8 @@ export default function LPForm() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Only allow submission from the final section (Fund Size)
-    if (currentSection !== 3) {
+    // Only allow submission from the final section (Fund Size) after user interaction
+    if (currentSection !== 3 || !fundSizeTouched) {
       // If Enter was pressed on an earlier section, advance to next section instead
       if (canProceed() && currentSection < 3) {
         setCurrentSection(currentSection + 1);
@@ -272,6 +274,7 @@ export default function LPForm() {
                     key={size.label}
                     type="button"
                     onClick={() => {
+                      setFundSizeTouched(true);
                       // If clicking outside current range, expand to include it
                       // If clicking inside range, set as new boundary (closer to edges)
                       if (i < formData.fundSizeMin) {
@@ -305,6 +308,7 @@ export default function LPForm() {
                   <input
                     type="range" min="0" max="5" value={formData.fundSizeMin}
                     onChange={(e) => {
+                      setFundSizeTouched(true);
                       const val = parseInt(e.target.value);
                       if (val <= formData.fundSizeMax) setFormData({ ...formData, fundSizeMin: val });
                     }}
@@ -317,6 +321,7 @@ export default function LPForm() {
                   <input
                     type="range" min="0" max="5" value={formData.fundSizeMax}
                     onChange={(e) => {
+                      setFundSizeTouched(true);
                       const val = parseInt(e.target.value);
                       if (val >= formData.fundSizeMin) setFormData({ ...formData, fundSizeMax: val });
                     }}
@@ -361,9 +366,10 @@ export default function LPForm() {
             ) : (
               <button
                 type="submit"
-                className="neu-btn neu-btn-primary flex items-center gap-2"
+                disabled={!fundSizeTouched}
+                className={`neu-btn flex items-center gap-2 ${fundSizeTouched ? "neu-btn-primary" : "opacity-50 cursor-not-allowed"}`}
               >
-                Initialize Search
+                {fundSizeTouched ? "Initialize Search" : "Adjust Fund Size Range"}
                 <span>🎯</span>
               </button>
             )}
