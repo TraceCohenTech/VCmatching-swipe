@@ -61,6 +61,16 @@ export default function LPForm() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Only allow submission from the final section (Fund Size)
+    if (currentSection !== 3) {
+      // If Enter was pressed on an earlier section, advance to next section instead
+      if (canProceed() && currentSection < 3) {
+        setCurrentSection(currentSection + 1);
+      }
+      return;
+    }
+
     if (!formData.type || formData.stages.length === 0 || formData.sectors.length === 0) {
       setScreenText("ERROR: COMPLETE ALL FIELDS");
       return;
